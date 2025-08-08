@@ -1,278 +1,261 @@
-'use client'
-
-import { useState, useMemo } from 'react'
-import { useStore } from '@/store/useStore'
-import { Card, CardContent, CardHeader } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { formatDate, formatTime, getCategoryLabel, getCategoryColor } from '@/lib/utils'
-import { Entry } from '@/types'
+import React, { useState } from 'react';
 import { 
   Calendar, 
-  Clock, 
-  Star, 
   Image as ImageIcon, 
+  Star, 
   Edit, 
   Trash2, 
-  ChevronDown, 
-  ChevronRight,
-  Tag as TagIcon
-} from 'lucide-react'
-import { supabase } from '@/lib/supabase'
-import EntryForm from './EntryForm'
-import Image from 'next/image'
+  Tag,
+  MoreVertical 
+} from 'lucide-react';
+import { Entry, Attachment } from '@/types';
+import { useStore } from '@/store/useStore';
+import { formatDate } from '@/lib/utils';
+import Button from './ui/Button';
+import { Card, CardContent } from './ui/Card';
+import ImageModal from './ImageModal';
 
 interface EntryListProps {
-  onRefresh: () => void
+  onEditEntry: (entry: Entry) => void;
 }
 
-export default function EntryList({ onRefresh }: EntryListProps) {
-  const { entries, filters, deleteEntry } = useStore()
-  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set())
-  const [editingEntry, setEditingEntry] = useState<Entry | null>(null)
+const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
+  const { filteredEntries, deleteEntry, setLoading } = useStore();
+  const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const filteredEntries = useMemo(() => {
-    return entries.filter(entry => {
-      // Filter by category
-      if (filters.category && entry.category !== filters.category) {
-        return false
-      }
+  const handleImageClick = (attachment: Attachment) => {
+    setSelectedImage(attachment);
+    setIsModalOpen(true);
+  };
 
-      // Filter by date range
-      if (filters.dateFrom && entry.date < filters.dateFrom) {
-        return false
-      }
-      if (filters.dateTo && entry.date > filters.dateTo) {
-        return false
-      }
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedImage(null);
+  };
 
-      // Filter by search term
-      if (filters.searchTerm) {
-        const searchLower = filters.searchTerm.toLowerCase()
-        const matchesTitle = entry.title.toLowerCase().includes(searchLower)
-        const matchesDescription = entry.description.toLowerCase().includes(searchLower)
-        const matchesTags = entry.tags.some(tag => 
-          tag.toLowerCase().includes(searchLower)
-        )
-        if (!matchesTitle && !matchesDescription && !matchesTags) {
-          return false
-        }
-      }
-
-      // Filter by important
-      if (filters.important && !entry.important) {
-        return false
-      }
-
-      // Filter by attachments
-      if (filters.hasAttachments && (!entry.attachments || entry.attachments.length === 0)) {
-        return false
-      }
-
-      return true
-    })
-  }, [entries, filters])
-
-  const handleDelete = async (entryId: string) => {
+  const handleDeleteEntry = async (entryId: string) => {
     if (!confirm('Sind Sie sicher, dass Sie diesen Eintrag löschen möchten?')) {
-      return
+      return;
     }
 
+    setLoading(true);
     try {
-      const { error } = await supabase
-        .from('entries')
-        .delete()
-        .eq('id', entryId)
+      const response = await fetch(`/api/entries/${entryId}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error
-
-      deleteEntry(entryId)
-      onRefresh()
+      if (response.ok) {
+        deleteEntry(entryId);
+      }
     } catch (error) {
-      console.error('Error deleting entry:', error)
+      console.error('Error deleting entry:', error);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const toggleExpand = (entryId: string) => {
-    const newExpanded = new Set(expandedEntries)
-    if (newExpanded.has(entryId)) {
-      newExpanded.delete(entryId)
-    } else {
-      newExpanded.add(entryId)
-    }
-    setExpandedEntries(newExpanded)
-  }
+  const getCategoryColor = (category: string) => {
+    const colors = {
+      konflikt: 'bg-red-100 text-red-800',
+      gespraech: 'bg-blue-100 text-blue-800',
+      verhalten: 'bg-yellow-100 text-yellow-800',
+      beweis: 'bg-purple-100 text-purple-800',
+      kindbetreuung: 'bg-green-100 text-green-800',
+      sonstiges: 'bg-gray-100 text-gray-800',
+    };
+    return colors[category as keyof typeof colors] || colors.sonstiges;
+  };
 
-  const getAttachmentUrl = (filePath: string) => {
-    const { data } = supabase.storage
-      .from('attachments')
-      .getPublicUrl(filePath)
-    return data.publicUrl
-  }
+  const getCategoryLabel = (category: string) => {
+    const labels = {
+      konflikt: 'Konflikt',
+      gespraech: 'Gespräch',
+      verhalten: 'Verhalten',
+      beweis: 'Beweis',
+      kindbetreuung: 'Kindbetreuung',
+      sonstiges: 'Sonstiges',
+    };
+    return labels[category as keyof typeof labels] || category;
+  };
 
   if (filteredEntries.length === 0) {
     return (
-      <Card>
-        <CardContent className="text-center py-12">
-          <div className="text-gray-600">
-            {entries.length === 0 ? (
-              <>
-                <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Noch keine Einträge</h3>
-                <p>Erstellen Sie Ihren ersten Eintrag, um zu beginnen.</p>
-              </>
-            ) : (
-              <>
-                <TagIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">Keine Ergebnisse</h3>
-                <p>Keine Einträge entsprechen den aktuellen Filtern.</p>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    )
+      <div className="text-center py-12">
+        <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Keine Einträge gefunden
+        </h3>
+        <p className="text-gray-500">
+          Erstellen Sie Ihren ersten Eintrag oder passen Sie Ihre Filter an.
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      {filteredEntries.map((entry) => {
-        const isExpanded = expandedEntries.has(entry.id)
+      {/* Timeline */}
+      <div className="relative">
+        {/* Timeline line */}
+        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200" />
         
-        return (
-          <Card key={entry.id} className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-semibold text-lg">{entry.title}</h3>
-                    {entry.important && (
-                      <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                    )}
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(entry.category)}`}>
-                      {getCategoryLabel(entry.category)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {formatDate(entry.date)}
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {formatTime(entry.time)}
-                    </div>
-                    {entry.attachments && entry.attachments.length > 0 && (
-                      <div className="flex items-center">
-                        <ImageIcon className="h-4 w-4 mr-1" />
-                        {entry.attachments.length} Anhang{entry.attachments.length !== 1 ? 'e' : ''}
+        {filteredEntries.map((entry, index) => (
+          <div key={entry._id} className="relative">
+            {/* Timeline dot */}
+            <div className={`absolute left-6 w-4 h-4 rounded-full border-2 bg-white ${
+              entry.isImportant ? 'border-red-500' : 'border-gray-300'
+            }`} />
+            
+            {/* Entry Card */}
+            <div className="ml-16 mb-8">
+              <Card hover className="transition-all duration-200 hover:shadow-lg">
+                <CardContent className="p-6">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {entry.title}
+                        </h3>
+                        {entry.isImportant && (
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  {entry.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {entry.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2 py-1 rounded bg-secondary text-secondary-foreground text-xs"
-                        >
-                          {tag}
+                      
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {formatDate(new Date(entry.date))}
                         </span>
-                      ))}
+                        
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(entry.category)}`}>
+                          {getCategoryLabel(entry.category)}
+                        </span>
+                        
+                        {entry.attachments.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <ImageIcon className="h-4 w-4" />
+                            {entry.attachments.length}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-
-                <div className="flex items-center space-x-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditingEntry(entry)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(entry.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleExpand(entry.id)}
-                  >
-                    {isExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-
-            {isExpanded && (
-              <CardContent className="pt-0">
-                <div className="border-t pt-4">
-                  <div className="prose prose-sm max-w-none">
-                    <p className="whitespace-pre-wrap">{entry.description}</p>
+                    
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditEntry(entry)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => entry._id && handleDeleteEntry(entry._id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
 
-                  {entry.attachments && entry.attachments.length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-medium mb-2">Anhänge:</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                        {entry.attachments.map((attachment) => (
-                          <div
-                            key={attachment.id}
-                            className="relative group rounded-lg overflow-hidden border"
-                          >
-                            <Image
-                              src={getAttachmentUrl(attachment.file_path)}
-                              alt={attachment.filename}
-                              width={200}
-                              height={96}
-                              className="w-full h-24 object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <p className="text-white text-xs text-center px-2">
-                                {attachment.filename}
-                              </p>
-                            </div>
-                          </div>
+                  {/* Description */}
+                  <div className="mb-4">
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {entry.description}
+                    </p>
+                  </div>
+
+                  {/* Attachments */}
+                  {entry.attachments.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">
+                        Anhänge ({entry.attachments.length})
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {entry.attachments.map((attachment, attachIndex) => (
+                          <AttachmentPreview
+                            key={attachIndex}
+                            attachment={attachment}
+                            onImageClick={handleImageClick}
+                          />
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <div className="mt-4 text-xs text-gray-600">
-                    Erstellt: {formatDate(entry.created_at, 'dd.MM.yyyy HH:mm')}
-                    {entry.updated_at !== entry.created_at && (
-                      <span className="ml-4">
-                        Geändert: {formatDate(entry.updated_at, 'dd.MM.yyyy HH:mm')}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-        )
-      })}
+                  {/* Tags */}
+                  {entry.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {entry.tags.map((tag, tagIndex) => (
+                        <span
+                          key={tagIndex}
+                          className="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 text-gray-700 text-xs"
+                        >
+                          <Tag className="h-3 w-3 mr-1" />
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ))}
+      </div>
 
-      {editingEntry && (
-        <EntryForm
-          entry={editingEntry}
-          onClose={() => setEditingEntry(null)}
-          onSuccess={() => {
-            setEditingEntry(null)
-            onRefresh()
-          }}
-        />
-      )}
+      {/* Image Modal */}
+      <ImageModal
+        attachment={selectedImage}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
-  )
+  );
+};
+
+interface AttachmentPreviewProps {
+  attachment: Attachment;
+  onImageClick: (attachment: Attachment) => void;
 }
+
+const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onImageClick }) => {
+  const handleClick = () => {
+    if (attachment.fileType.startsWith('image/')) {
+      onImageClick(attachment);
+    }
+  };
+
+  if (attachment.fileType.startsWith('image/')) {
+    return (
+      <div
+        className="relative group cursor-pointer overflow-hidden rounded-lg bg-gray-100"
+        onClick={handleClick}
+      >
+        <img
+          src={attachment.url}
+          alt={attachment.fileName}
+          className="w-full h-20 object-cover transition-transform group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
+        {attachment.isImportant && (
+          <Star className="absolute top-1 right-1 h-3 w-3 text-yellow-500 fill-current" />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center p-2 bg-gray-50 rounded-lg">
+      <ImageIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+      <span className="text-xs text-gray-600 truncate">
+        {attachment.fileName}
+      </span>
+    </div>
+  );
+};
+
+export default EntryList;

@@ -4,7 +4,6 @@
 /node_modules
 /.pnp
 .pnp.js
-.yarn/install-state.gz
 
 # testing
 /coverage
@@ -28,7 +27,6 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
-.env.production
 
 # vercel
 .vercel
@@ -44,13 +42,39 @@ next-env.d.ts
 *.swo
 
 # OS
-.DS_Store
 Thumbs.db
 
-# logs
+# Docker
+/data/
+docker-compose.override.yml
+
+# Logs
 logs
 *.log
 
-# Temporary files
-.tmp/
-.cache/
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# MongoDB data
+/mongodb-data/

@@ -1,388 +1,275 @@
-'use client'
-
-import { useState, useRef } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { getCategoryLabel, formatDate, formatTime, isValidImageType, sanitizeFilename } from '@/lib/utils'
-import { EntryCategory } from '@/types'
-import { X, Upload, Image as ImageIcon, Star, Calendar, Clock, Tag } from 'lucide-react'
-import { v4 as uuidv4 } from 'uuid'
-
-const entrySchema = z.object({
-  title: z.string().min(1, 'Titel ist erforderlich'),
-  description: z.string().min(1, 'Beschreibung ist erforderlich'),
-  category: z.enum(['konflikt', 'gespraech', 'verhalten', 'beweis', 'kindbetreuung', 'sonstiges']),
-  date: z.string().min(1, 'Datum ist erforderlich'),
-  time: z.string().min(1, 'Uhrzeit ist erforderlich'),
-  important: z.boolean(),
-  tags: z.string().optional()
-})
-
-type EntryFormData = z.infer<typeof entrySchema>
+import React, { useState, useCallback } from 'react';
+import { X, Save, Tag, Calendar, FileText } from 'lucide-react';
+import { Entry, EntryCategory } from '@/types';
+import { useStore } from '@/store/useStore';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import { Card, CardHeader, CardContent } from './ui/Card';
+import FileUpload from './FileUpload';
+import { formatDate } from '@/lib/utils';
 
 interface EntryFormProps {
-  onClose: () => void
-  onSuccess: () => void
-  entry?: any // For editing existing entries
+  entry?: Entry;
+  onClose: () => void;
 }
 
-export default function EntryForm({ onClose, onSuccess, entry }: EntryFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [attachments, setAttachments] = useState<File[]>([])
-  const [dragOver, setDragOver] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const { user } = useAuth()
+const CATEGORIES: { value: EntryCategory; label: string }[] = [
+  { value: 'konflikt', label: 'Konflikt' },
+  { value: 'gespraech', label: 'Gespräch' },
+  { value: 'verhalten', label: 'Verhalten' },
+  { value: 'beweis', label: 'Beweis' },
+  { value: 'kindbetreuung', label: 'Kindbetreuung' },
+  { value: 'sonstiges', label: 'Sonstiges' },
+];
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors }
-  } = useForm<EntryFormData>({
-    resolver: zodResolver(entrySchema),
-    defaultValues: {
-      title: entry?.title || '',
-      description: entry?.description || '',
-      category: entry?.category || 'sonstiges',
-      date: entry?.date || new Date().toISOString().split('T')[0],
-      time: entry?.time || new Date().toTimeString().slice(0, 5),
-      important: entry?.important || false,
-      tags: entry?.tags?.join(', ') || ''
+const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
+  const { addEntry, updateEntry, setLoading } = useStore();
+  
+  const [formData, setFormData] = useState({
+    title: entry?.title || '',
+    date: entry?.date ? new Date(entry.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+    description: entry?.description || '',
+    category: entry?.category || 'sonstiges' as EntryCategory,
+    tags: entry?.tags?.join(', ') || '',
+    isImportant: entry?.isImportant || false,
+  });
+  
+  const [files, setFiles] = useState<File[]>([]);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  const validateForm = useCallback(() => {
+    const newErrors: { [key: string]: string } = {};
+    
+    if (!formData.title.trim()) {
+      newErrors.title = 'Titel ist erforderlich';
     }
-  })
-
-  const categories: EntryCategory[] = [
-    'konflikt', 'gespraech', 'verhalten', 'beweis', 'kindbetreuung', 'sonstiges'
-  ]
-
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files) return
-
-    const validFiles = Array.from(files).filter(file => 
-      isValidImageType(file.type) && file.size <= 10 * 1024 * 1024 // 10MB limit
-    )
-
-    setAttachments(prev => [...prev, ...validFiles])
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(true)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    handleFileSelect(e.dataTransfer.files)
-  }
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items
-    if (!items) return
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      if (item.type.indexOf('image') !== -1) {
-        const file = item.getAsFile()
-        if (file) {
-          setAttachments(prev => [...prev, file])
-        }
-      }
+    
+    if (!formData.description.trim()) {
+      newErrors.description = 'Beschreibung ist erforderlich';
     }
-  }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData]);
 
-  const removeAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index))
-  }
+  const uploadFiles = async (files: File[]): Promise<string[]> => {
+    // In a real app, this would upload to a file storage service
+    // For now, we'll use data URLs
+    const uploadPromises = files.map(file => {
+      return new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+    });
+    
+    return Promise.all(uploadPromises);
+  };
 
-  const uploadAttachments = async (entryId: string) => {
-    const uploadPromises = attachments.map(async (file, index) => {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${entryId}_${index}.${fileExt}`
-      const filePath = `${user!.id}/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('attachments')
-        .upload(filePath, file)
-
-      if (uploadError) throw uploadError
-
-      const { error: dbError } = await supabase
-        .from('attachments')
-        .insert({
-          entry_id: entryId,
-          filename: file.name,
-          file_path: filePath,
-          file_size: file.size,
-          mime_type: file.type
-        })
-
-      if (dbError) throw dbError
-    })
-
-    await Promise.all(uploadPromises)
-  }
-
-  const onSubmit = async (data: EntryFormData) => {
-    if (!user) return
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsSaving(true);
+    setLoading(true);
+    
     try {
-      setIsSubmitting(true)
+      // Upload files
+      const uploadedUrls = await uploadFiles(files);
+      
+      const attachments = uploadedUrls.map((url, index) => ({
+        fileName: files[index].name,
+        fileType: files[index].type,
+        fileSize: files[index].size,
+        url,
+        isImportant: false,
+        uploadedAt: new Date(),
+      }));
 
-      const tags = data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      const entryData: Entry = {
+        title: formData.title.trim(),
+        date: new Date(formData.date),
+        description: formData.description.trim(),
+        category: formData.category,
+        tags: formData.tags
+          .split(',')
+          .map(tag => tag.trim())
+          .filter(tag => tag.length > 0),
+        isImportant: formData.isImportant,
+        attachments: [...(entry?.attachments || []), ...attachments],
+        createdAt: entry?.createdAt || new Date(),
+        updatedAt: new Date(),
+      };
 
-      const entryData = {
-        user_id: user.id,
-        title: data.title,
-        description: data.description,
-        category: data.category,
-        date: data.date,
-        time: data.time,
-        important: data.important,
-        tags
-      }
-
-      let entryId: string
-
-      if (entry) {
+      if (entry?._id) {
         // Update existing entry
-        const { error } = await supabase
-          .from('entries')
-          .update(entryData)
-          .eq('id', entry.id)
-
-        if (error) throw error
-        entryId = entry.id
+        const response = await fetch(`/api/entries/${entry._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entryData),
+        });
+        
+        if (response.ok) {
+          const updatedEntry = await response.json();
+          updateEntry(entry._id, updatedEntry);
+        }
       } else {
         // Create new entry
-        const { data: newEntry, error } = await supabase
-          .from('entries')
-          .insert(entryData)
-          .select()
-          .single()
-
-        if (error) throw error
-        entryId = newEntry.id
+        const response = await fetch('/api/entries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entryData),
+        });
+        
+        if (response.ok) {
+          const newEntry = await response.json();
+          addEntry(newEntry);
+        }
       }
-
-      // Upload attachments if any
-      if (attachments.length > 0) {
-        await uploadAttachments(entryId)
-      }
-
-      onSuccess()
+      
+      onClose();
     } catch (error) {
-      console.error('Error saving entry:', error)
+      console.error('Error saving entry:', error);
     } finally {
-      setIsSubmitting(false)
+      setIsSaving(false);
+      setLoading(false);
     }
-  }
+  };
+
+  const handleFilesAdd = useCallback((newFiles: File[]) => {
+    setFiles(prev => [...prev, ...newFiles]);
+  }, []);
+
+  const handleFileRemove = useCallback((index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>
+            <h2 className="text-xl font-semibold text-gray-900">
               {entry ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}
-            </CardTitle>
+            </h2>
             <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
         </CardHeader>
+        
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Title */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Tag className="h-4 w-4 mr-2" />
-                Titel
-              </label>
-              <Input
-                {...register('title')}
-                placeholder="Kurze Beschreibung des Ereignisses"
-                onPaste={handlePaste}
-              />
-              {errors.title && (
-                <p className="text-sm text-destructive">{errors.title.message}</p>
-              )}
-            </div>
+            <Input
+              label="Titel"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              error={errors.title}
+              placeholder="Kurzer aussagekräftiger Titel..."
+              icon={<FileText className="h-4 w-4" />}
+              required
+            />
 
             {/* Date and Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Datum
-                </label>
-                <Input
-                  type="date"
-                  {...register('date')}
-                />
-                {errors.date && (
-                  <p className="text-sm text-destructive">{errors.date.message}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Uhrzeit
-                </label>
-                <Input
-                  type="time"
-                  {...register('time')}
-                />
-                {errors.time && (
-                  <p className="text-sm text-destructive">{errors.time.message}</p>
-                )}
-              </div>
-            </div>
+            <Input
+              label="Datum und Uhrzeit"
+              type="datetime-local"
+              value={formData.date}
+              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+              icon={<Calendar className="h-4 w-4" />}
+            />
 
             {/* Category */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Kategorie</label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Kategorie
+              </label>
               <select
-                {...register('category')}
-                className="w-full p-2 border rounded-md bg-white"
+                value={formData.category}
+                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as EntryCategory }))}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
               >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>
-                    {getCategoryLabel(cat)}
+                {CATEGORIES.map(category => (
+                  <option key={category.value} value={category.value}>
+                    {category.label}
                   </option>
                 ))}
               </select>
             </div>
 
             {/* Description */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Beschreibung</label>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Beschreibung
+                <span className="text-red-500 ml-1">*</span>
+              </label>
               <textarea
-                {...register('description')}
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={4}
-                className="w-full p-2 border rounded-md bg-white resize-none"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 placeholder="Detaillierte Beschreibung des Ereignisses..."
-                onPaste={handlePaste}
               />
               {errors.description && (
-                <p className="text-sm text-destructive">{errors.description.message}</p>
+                <p className="mt-1 text-sm text-red-600">{errors.description}</p>
               )}
             </div>
 
             {/* Tags */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tags (optional)</label>
-              <Input
-                {...register('tags')}
-                placeholder="Tag1, Tag2, Tag3"
-              />
-              <p className="text-xs text-gray-600">
-                Trennen Sie Tags mit Kommas
-              </p>
-            </div>
+            <Input
+              label="Tags (komma-getrennt)"
+              value={formData.tags}
+              onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
+              placeholder="wichtig, dringend, konflikt..."
+              icon={<Tag className="h-4 w-4" />}
+            />
 
-            {/* Important Flag */}
-            <div className="flex items-center space-x-2">
+            {/* Important */}
+            <div className="flex items-center">
               <input
                 type="checkbox"
                 id="important"
-                {...register('important')}
-                className="h-4 w-4"
+                checked={formData.isImportant}
+                onChange={(e) => setFormData(prev => ({ ...prev, isImportant: e.target.checked }))}
+                className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
               />
-              <label htmlFor="important" className="text-sm font-medium flex items-center">
-                <Star className="h-4 w-4 mr-1" />
+              <label htmlFor="important" className="ml-2 text-sm text-gray-700">
                 Als wichtig markieren
               </label>
             </div>
 
             {/* File Upload */}
-            <div className="space-y-4">
-              <label className="text-sm font-medium flex items-center">
-                <ImageIcon className="h-4 w-4 mr-2" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Anhänge
               </label>
-              
-              {/* Drop Zone */}
-              <div
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                  dragOver ? 'border-blue-500 bg-primary/5' : 'border-muted-foreground/25'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <Upload className="h-8 w-8 mx-auto mb-2 text-gray-600" />
-                <p className="text-sm text-gray-600 mb-2">
-                  Bilder hier ablegen oder einfügen (Strg+V)
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Dateien auswählen
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFileSelect(e.target.files)}
-                />
-              </div>
-
-              {/* Attachment Preview */}
-              {attachments.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Ausgewählte Dateien:</p>
-                  <div className="space-y-1">
-                    {attachments.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 bg-gray-100 rounded-md"
-                      >
-                        <span className="text-sm truncate">{file.name}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeAttachment(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <FileUpload
+                files={files}
+                onFilesAdd={handleFilesAdd}
+                onFileRemove={handleFileRemove}
+              />
             </div>
 
-            {/* Actions */}
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+            {/* Submit Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button variant="outline" onClick={onClose} disabled={isSaving}>
                 Abbrechen
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Wird gespeichert...' : (entry ? 'Aktualisieren' : 'Erstellen')}
+              <Button type="submit" disabled={isSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {isSaving ? 'Speichere...' : 'Speichern'}
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
     </div>
-  )
-}
+  );
+};
+
+export default EntryForm;

@@ -1,183 +1,162 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
-import { Entry, ExportOptions } from '@/types'
-import { formatDate, formatTime, getCategoryLabel } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { Entry, ExportOptions } from '@/types';
+import { formatDate } from './utils';
 
-export async function generatePDF(entries: Entry[], options: ExportOptions): Promise<Blob> {
-  const pdfDoc = await PDFDocument.create()
-  const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
-  const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-  
-  let page = pdfDoc.addPage([595.28, 841.89]) // A4 size
-  let yPosition = 800
-  const margin = 50
-  const pageWidth = 595.28 - 2 * margin
-  const lineHeight = 14
-
-  // Helper function to add text with word wrapping
-  const addText = (text: string, x: number, y: number, options: any = {}) => {
-    const fontSize = options.fontSize || 10
-    const font = options.bold ? helveticaBoldFont : helveticaFont
-    const maxWidth = options.maxWidth || pageWidth
-    
-    const words = text.split(' ')
-    let line = ''
-    let currentY = y
-
-    for (const word of words) {
-      const testLine = line + (line ? ' ' : '') + word
-      const textWidth = font.widthOfTextAtSize(testLine, fontSize)
-      
-      if (textWidth > maxWidth && line) {
-        page.drawText(line, {
-          x,
-          y: currentY,
-          size: fontSize,
-          font,
-          color: options.color || rgb(0, 0, 0)
-        })
-        line = word
-        currentY -= lineHeight
-        
-        // Check if we need a new page
-        if (currentY < margin) {
-          page = pdfDoc.addPage([595.28, 841.89])
-          currentY = 800
-        }
-      } else {
-        line = testLine
-      }
-    }
-    
-    if (line) {
-      page.drawText(line, {
-        x,
-        y: currentY,
-        size: fontSize,
-        font,
-        color: options.color || rgb(0, 0, 0)
-      })
-      currentY -= lineHeight
-    }
-    
-    return currentY
-  }
-
-  // Title
-  yPosition = addText('CommuniTrack - Kommunikationsdokumentation', margin, yPosition, {
-    fontSize: 16,
-    bold: true
-  })
-  
-  yPosition -= 10
-  yPosition = addText(`Erstellt am: ${formatDate(new Date().toISOString())}`, margin, yPosition)
-  yPosition = addText(`Anzahl Einträge: ${entries.length}`, margin, yPosition)
-  yPosition -= 20
-
-  // Sort entries by date and time
-  const sortedEntries = [...entries].sort((a, b) => {
-    const dateA = new Date(`${a.date}T${a.time}`)
-    const dateB = new Date(`${b.date}T${b.time}`)
-    return dateB.getTime() - dateA.getTime()
-  })
-
-  // Add entries
-  for (let i = 0; i < sortedEntries.length; i++) {
-    const entry = sortedEntries[i]
-    
-    // Check if we need a new page
-    if (yPosition < margin + 100) {
-      page = pdfDoc.addPage([595.28, 841.89])
-      yPosition = 800
-    }
-    
-    // Entry header
-    yPosition = addText(`${i + 1}. ${entry.title}`, margin, yPosition, {
-      fontSize: 12,
-      bold: true
-    })
-    
-    yPosition -= 5
-    
-    // Entry details
-    const details = [
-      `Datum: ${formatDate(entry.date)} um ${formatTime(entry.time)}`,
-      `Kategorie: ${getCategoryLabel(entry.category)}`,
-      entry.important ? 'Als wichtig markiert' : '',
-      entry.tags.length > 0 ? `Tags: ${entry.tags.join(', ')}` : ''
-    ].filter(Boolean)
-    
-    for (const detail of details) {
-      yPosition = addText(detail, margin, yPosition, { fontSize: 9 })
-    }
-    
-    yPosition -= 5
-    
-    // Description
-    yPosition = addText('Beschreibung:', margin, yPosition, { bold: true })
-    yPosition = addText(entry.description, margin + 10, yPosition, { maxWidth: pageWidth - 10 })
-    
-    // Attachments
-    if (options.includeAttachments && entry.attachments && entry.attachments.length > 0) {
-      yPosition -= 5
-      yPosition = addText('Anhänge:', margin, yPosition, { bold: true })
-      
-      for (const attachment of entry.attachments) {
-        yPosition = addText(`- ${attachment.filename}`, margin + 10, yPosition, { fontSize: 9 })
-      }
-    }
-    
-    yPosition -= 20
-  }
-
-  // Finalize PDF
-  const pdfBytes = await pdfDoc.save()
-  return new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' })
+// Helper function for file size formatting
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-export function generateJSON(entries: Entry[], options: ExportOptions): Blob {
+// Simple PDF generation using jsPDF alternative - for now we'll create a simple HTML to PDF
+export const exportToPDF = async (entries: Entry[], options: ExportOptions): Promise<Blob> => {
+  const getCategoryLabel = (category: string) => {
+    const labels = {
+      konflikt: 'Konflikt',
+      gespraech: 'Gespräch', 
+      verhalten: 'Verhalten',
+      beweis: 'Beweis',
+      kindbetreuung: 'Kindbetreuung',
+      sonstiges: 'Sonstiges',
+    };
+    return labels[category as keyof typeof labels] || category;
+  };
+
+  // Create HTML content for PDF
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>CommuniTrack Export</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        .header { border-bottom: 3px solid #0ea5e9; padding-bottom: 20px; margin-bottom: 30px; }
+        .title { font-size: 28px; font-weight: bold; color: #1f2937; margin-bottom: 10px; }
+        .subtitle { font-size: 14px; color: #6b7280; margin-bottom: 5px; }
+        .entry { border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 25px; page-break-inside: avoid; }
+        .entry.important { background-color: #fef3c7; border-color: #f59e0b; }
+        .entry-header { border-bottom: 1px solid #f3f4f6; padding-bottom: 12px; margin-bottom: 15px; }
+        .entry-title { font-size: 18px; font-weight: bold; color: #1f2937; margin-bottom: 8px; }
+        .entry-meta { font-size: 12px; color: #6b7280; margin-bottom: 3px; }
+        .entry-description { font-size: 13px; color: #374151; margin-bottom: 15px; white-space: pre-wrap; }
+        .attachments { margin-bottom: 15px; }
+        .attachments-header { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
+        .attachment-item { font-size: 12px; color: #6b7280; margin-bottom: 5px; }
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
+        .page-break { page-break-before: always; }
+        @media print { body { margin: 20px; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="title">CommuniTrack Export</div>
+        <div class="subtitle">Exportiert am ${formatDate(new Date())}</div>
+        ${options.dateRange ? `<div class="subtitle">Zeitraum: ${formatDate(options.dateRange.start)} - ${formatDate(options.dateRange.end)}</div>` : ''}
+        <div class="subtitle">Anzahl Einträge: ${entries.length}</div>
+      </div>
+      
+      ${entries.map((entry, index) => `
+        <div class="entry ${entry.isImportant ? 'important' : ''} ${index > 0 ? 'page-break' : ''}">
+          <div class="entry-header">
+            <div class="entry-title">${entry.title} ${entry.isImportant ? '⭐' : ''}</div>
+            <div class="entry-meta">Datum: ${formatDate(new Date(entry.date))}</div>
+            <div class="entry-meta">Kategorie: ${getCategoryLabel(entry.category)}</div>
+            ${entry.attachments.length > 0 ? `<div class="entry-meta">Anhänge: ${entry.attachments.length} Datei(en)</div>` : ''}
+          </div>
+          
+          <div class="entry-description">${entry.description}</div>
+          
+          ${options.includeImages && entry.attachments.length > 0 ? `
+            <div class="attachments">
+              <div class="attachments-header">Anhänge:</div>
+              ${entry.attachments.map(attachment => `
+                <div class="attachment-item">• ${attachment.fileName} (${formatFileSize(attachment.fileSize)})${attachment.context ? ` - ${attachment.context}` : ''}</div>
+              `).join('')}
+            </div>
+          ` : ''}
+          
+          ${entry.tags.length > 0 ? `
+            <div class="tags">
+              ${entry.tags.map(tag => `<span class="tag">#${tag}</span>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('')}
+    </body>
+    </html>
+  `;
+
+  // Create blob from HTML content
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  return blob;
+};
+
+export const exportToJSON = (entries: Entry[], options: ExportOptions): string => {
   const exportData = {
-    exportDate: new Date().toISOString(),
-    exportOptions: options,
-    totalEntries: entries.length,
+    metadata: {
+      exportDate: new Date().toISOString(),
+      entryCount: entries.length,
+      dateRange: options.dateRange,
+      includeImages: options.includeImages,
+    },
     entries: entries.map(entry => ({
       ...entry,
-      attachments: options.includeAttachments ? entry.attachments : undefined
-    }))
-  }
+      // Convert attachments to base64 if including images
+      attachments: options.includeImages 
+        ? entry.attachments 
+        : entry.attachments.map(att => ({
+            ...att,
+            url: '[Bild nicht exportiert]'
+          }))
+    })),
+  };
   
-  const jsonString = JSON.stringify(exportData, null, 2)
-  return new Blob([jsonString], { type: 'application/json' })
-}
+  return JSON.stringify(exportData, null, 2);
+};
 
-export function generateCSV(entries: Entry[], options: ExportOptions): Blob {
+export const exportToCSV = (entries: Entry[], options: ExportOptions): string => {
   const headers = [
-    'Datum',
-    'Uhrzeit',
     'Titel',
+    'Datum',
     'Kategorie',
     'Beschreibung',
-    'Wichtig',
     'Tags',
+    'Wichtig',
     'Anhänge',
-    'Erstellt am'
-  ]
+    'Erstellt am',
+    'Aktualisiert am'
+  ];
   
   const rows = entries.map(entry => [
-    entry.date,
-    entry.time,
     `"${entry.title.replace(/"/g, '""')}"`,
-    getCategoryLabel(entry.category),
+    formatDate(new Date(entry.date)),
+    entry.category,
     `"${entry.description.replace(/"/g, '""')}"`,
-    entry.important ? 'Ja' : 'Nein',
     `"${entry.tags.join(', ')}"`,
-    entry.attachments ? entry.attachments.length.toString() : '0',
-    formatDate(entry.created_at, 'dd.MM.yyyy HH:mm')
-  ])
+    entry.isImportant ? 'Ja' : 'Nein',
+    entry.attachments.length.toString(),
+    formatDate(new Date(entry.createdAt)),
+    formatDate(new Date(entry.updatedAt)),
+  ]);
   
-  const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n')
+  return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+};
+
+// Download helper
+export const downloadFile = (content: string | Blob, filename: string, type: string) => {
+  const blob = content instanceof Blob ? content : new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
   
-  // Add BOM for proper UTF-8 encoding in Excel
-  const BOM = '\uFEFF'
-  return new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8' })
-}
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
+};

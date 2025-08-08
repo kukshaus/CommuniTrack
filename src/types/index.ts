@@ -1,34 +1,26 @@
-export interface User {
-  id: string;
-  email: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Entry {
-  id: string;
-  user_id: string;
+  _id?: string;
   title: string;
+  date: Date;
   description: string;
   category: EntryCategory;
-  date: string;
-  time: string;
-  important: boolean;
+  attachments: Attachment[];
   tags: string[];
-  created_at: string;
-  updated_at: string;
-  attachments?: Attachment[];
+  isImportant: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Attachment {
-  id: string;
-  entry_id: string;
-  filename: string;
-  file_path: string;
-  file_size: number;
-  mime_type: string;
+  _id?: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  url: string;
+  thumbnail?: string;
   context?: string;
-  created_at: string;
+  isImportant: boolean;
+  uploadedAt: Date;
 }
 
 export type EntryCategory = 
@@ -39,51 +31,23 @@ export type EntryCategory =
   | 'kindbetreuung'
   | 'sonstiges';
 
-export interface EntryFilter {
+export interface FilterOptions {
+  startDate?: Date;
+  endDate?: Date;
   category?: EntryCategory;
-  dateFrom?: string;
-  dateTo?: string;
   searchTerm?: string;
-  hasAttachments?: boolean;
-  important?: boolean;
+  hasMedia?: boolean;
   tags?: string[];
+  isImportant?: boolean;
 }
 
 export interface ExportOptions {
   format: 'pdf' | 'json' | 'csv';
-  includeAttachments: boolean;
-  dateRange?: {
-    from: string;
-    to: string;
-  };
+  includeImages: boolean;
+  passwordProtected: boolean;
   password?: string;
-}
-
-export interface AppState {
-  user: User | null;
-  entries: Entry[];
-  isLoading: boolean;
-  error: string | null;
-}
-
-export interface Database {
-  public: {
-    Tables: {
-      users: {
-        Row: User;
-        Insert: Omit<User, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<User, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      entries: {
-        Row: Entry;
-        Insert: Omit<Entry, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Entry, 'id' | 'created_at' | 'updated_at'>>;
-      };
-      attachments: {
-        Row: Attachment;
-        Insert: Omit<Attachment, 'id' | 'created_at'>;
-        Update: Partial<Omit<Attachment, 'id' | 'created_at'>>;
-      };
-    };
+  dateRange?: {
+    start: Date;
+    end: Date;
   };
 }

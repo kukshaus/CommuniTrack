@@ -1,41 +1,27 @@
-# CommuniTrack
+# 📝 CommuniTrack
 
-Eine moderne Web-Anwendung zur **Dokumentation, Organisation und Export** von kommunikationsbezogenen Ereignissen mit einer Ex-Partnerin oder anderen wichtigen Personen. CommuniTrack hilft dabei, wichtige Gespräche, Konflikte und Beweise rechtssicher zu dokumentieren.
+Eine moderne Web-Anwendung zur strukturierten Dokumentation von kommunikationsbezogenen Ereignissen mit einer Ex-Partnerin für rechtliche Zwecke.
 
 ## 🚀 Features
 
-### ✅ MVP Features (implementiert)
-- **Benutzerauthentifizierung** - Sichere Anmeldung und Registrierung
-- **Eintragsverwaltung** - Erstellen, bearbeiten und löschen von Einträgen
-- **Kategorisierung** - Einträge nach Kategorien organisieren (Konflikt, Gespräch, Verhalten, etc.)
-- **Medienhandling** - Drag & Drop und Copy/Paste für Bilder
-- **Chronologische Ansicht** - Zeitgesteuerte Darstellung aller Einträge
-- **Erweiterte Filterung** - Nach Kategorie, Datum, Stichwörtern und mehr filtern
-- **Export-Funktionen** - PDF, JSON und CSV Export für rechtliche Zwecke
+- ✍️ **Einfache Eintragserstellung** mit Titel, Datum, Beschreibung und Kategorien
+- 📋 **Drag & Drop + Copy & Paste** für Bilder und Screenshots
+- 📅 **Chronologische Timeline-Ansicht** aller Einträge
+- 🔍 **Erweiterte Filter- und Suchfunktionen**
+- 📄 **Export zu PDF, JSON und CSV** für rechtliche Zwecke
+- 📱 **Mobile-First Responsive Design**
+- 🛡️ **Sichere MongoDB-Datenspeicherung**
 
-### 🔧 Technische Features
-- **Mobile First** - Responsive Design für alle Geräte
-- **Schnelle Performance** - Optimiert für sofortige Reaktionen
-- **Sichere Datenspeicherung** - Verschlüsselte Cloud-Speicherung mit Supabase
-- **Moderne UI** - Minimalistische, ablenkungsfreie Benutzeroberfläche
-- **Offline-fähig** - Lokale Speicherung für bessere Performance
+## 🛠️ Technologie-Stack
 
-## 🛠 Tech Stack
+- **Frontend:** Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend:** Next.js API Routes
+- **Datenbank:** MongoDB mit Docker
+- **State Management:** Zustand
+- **Export:** React-PDF, CSV-Export
+- **UI:** Lucide Icons, responsive Design
 
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS, Lucide Icons
-- **State Management**: Zustand
-- **Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **Forms**: React Hook Form + Zod Validation
-- **PDF Generation**: pdf-lib
-- **Deployment**: Vercel-ready
-
-## 📦 Installation
-
-### Voraussetzungen
-- Node.js 18+
-- npm oder yarn
-- Supabase Account
+## 📦 Installation & Setup
 
 ### 1. Repository klonen
 ```bash
@@ -48,137 +34,189 @@ cd CommuniTrack
 npm install
 ```
 
-### 3. Umgebungsvariablen einrichten
+### 3. MongoDB mit Docker starten
 ```bash
-cp .env.local.example .env.local
+# MongoDB Container starten
+docker-compose up -d mongodb
+
+# Optional: MongoDB Express für Database Management
+docker-compose up -d mongo-express
 ```
 
-Bearbeiten Sie `.env.local` mit Ihren Supabase-Credentials:
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-NEXTAUTH_SECRET=your-nextauth-secret
-NEXTAUTH_URL=http://localhost:3000
+### 4. Umgebungsvariablen konfigurieren
+```bash
+# .env.local erstellen
+cp env.template .env.local
+
+# .env.local bearbeiten und MongoDB URI anpassen
+MONGODB_URI=mongodb://admin:password@localhost:27017/communitrack
 ```
 
-### 4. Supabase Datenbank einrichten
-
-1. Erstellen Sie ein neues Supabase Projekt
-2. Führen Sie das SQL-Schema aus der Datei `supabase_schema.sql` in der Supabase SQL-Konsole aus
-3. Aktivieren Sie Row Level Security (RLS) in den Supabase-Einstellungen
-
-### 5. Entwicklungsserver starten
+### 5. Anwendung starten
 ```bash
 npm run dev
 ```
 
-Die App läuft dann unter [http://localhost:3000](http://localhost:3000).
+Die Anwendung ist nun unter [http://localhost:3000](http://localhost:3000) verfügbar.
 
-## 🏗 Projektstruktur
+## 🗄️ Storage Options
 
-```
-src/
-├── app/                    # Next.js App Router
-├── components/             # React-Komponenten
-│   ├── ui/                # Wiederverwendbare UI-Komponenten
-│   ├── AuthPage.tsx       # Authentifizierung
-│   ├── Dashboard.tsx      # Hauptdashboard
-│   ├── EntryForm.tsx      # Eintragsformular
-│   ├── EntryList.tsx      # Eintragsliste
-│   ├── FilterBar.tsx      # Filterkomponente
-│   └── ExportDialog.tsx   # Export-Dialog
-├── hooks/                 # Custom React Hooks
-├── lib/                   # Utilities und Konfiguration
-├── store/                 # Zustand Store
-├── types/                 # TypeScript Definitionen
-└── styles/               # CSS Dateien
+The application supports multiple storage backends:
+
+### 1. In-Memory Storage (Default/Demo)
+- **No setup required** - perfect for testing and development
+- Includes sample data for immediate testing
+- Data is lost when the application restarts
+
+### 2. MongoDB with Docker
+```bash
+docker-compose up -d mongodb
 ```
 
-## 📱 Verwendung
+### 3. MongoDB Express (Optional)
+```bash
+docker-compose up -d mongo-express
+```
+MongoDB Express ist dann unter [http://localhost:8081](http://localhost:8081) verfügbar.
 
-### Ersten Eintrag erstellen
-1. Registrieren Sie sich oder melden Sie sich an
-2. Klicken Sie auf "Neuer Eintrag"
-3. Füllen Sie alle erforderlichen Felder aus
-4. Fügen Sie optional Bilder per Drag & Drop oder Copy/Paste hinzu
-5. Speichern Sie den Eintrag
+**Login Daten:**
+- Username: admin
+- Password: admin
 
-### Einträge filtern und suchen
-- Nutzen Sie die Suchleiste für Volltext-Suche
-- Filtern Sie nach Kategorie, Datum oder Wichtigkeit
-- Kombinieren Sie mehrere Filter für präzise Ergebnisse
+### 4. Custom MongoDB
+Edit `.env.local` with your MongoDB connection string:
+```
+MONGODB_URI=mongodb://your-connection-string
+```
 
-### Daten exportieren
-1. Klicken Sie auf "Export" in der oberen Navigation
-2. Wählen Sie das gewünschte Format (PDF, JSON, CSV)
-3. Konfigurieren Sie die Export-Optionen
-4. Laden Sie die generierte Datei herunter
+## 📊 Datenbankschema
 
-## 🔒 Sicherheit
+### Entries Collection
+```typescript
+interface Entry {
+  _id?: string;
+  title: string;
+  date: Date;
+  description: string;
+  category: 'konflikt' | 'gespraech' | 'verhalten' | 'beweis' | 'kindbetreuung' | 'sonstiges';
+  attachments: Attachment[];
+  tags: string[];
+  isImportant: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
 
-- **Row Level Security (RLS)** - Jeder Benutzer kann nur seine eigenen Daten sehen
-- **Sichere Authentifizierung** - Passwort-basiert mit Supabase Auth
-- **Verschlüsselte Speicherung** - Alle Daten werden verschlüsselt in der Cloud gespeichert
-- **DSGVO-konform** - Datenschutz nach europäischen Standards
+### Attachments Schema
+```typescript
+interface Attachment {
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  url: string;
+  thumbnail?: string;
+  context?: string;
+  isImportant: boolean;
+  uploadedAt: Date;
+}
+```
 
-## 🚀 Deployment
-
-### Vercel (empfohlen)
-1. Pushen Sie den Code zu GitHub
-2. Verbinden Sie Ihr Repository mit Vercel
-3. Fügen Sie Ihre Umgebungsvariablen in Vercel hinzu
-4. Deploy!
-
-### Andere Plattformen
-Die App kann auf jeder Node.js-fähigen Plattform deployed werden:
-- Netlify
-- AWS Amplify
-- Digital Ocean App Platform
-- Railway
-
-## 🧪 Testing
+## 🔧 Verfügbare Scripts
 
 ```bash
-# Type checking
-npm run type-check
+# Entwicklungsserver starten
+npm run dev
+
+# Production Build erstellen
+npm run build
+
+# Production Server starten
+npm start
 
 # Linting
 npm run lint
 
-# Build test
+# Docker Services starten
+docker-compose up -d
+
+# Docker Services stoppen
+docker-compose down
+
+# Datenbank zurücksetzen
+docker-compose down -v && docker-compose up -d
+```
+
+## 📱 Nutzung
+
+### 1. Neuen Eintrag erstellen
+- Klicken Sie auf "Neuer Eintrag"
+- Füllen Sie alle erforderlichen Felder aus
+- Laden Sie optional Bilder per Drag & Drop oder Copy & Paste hoch
+- Speichern Sie den Eintrag
+
+### 2. Einträge filtern und suchen
+- Nutzen Sie die Suchleiste für schnelle Textsuche
+- Verwenden Sie erweiterte Filter für Datum, Kategorie, Tags etc.
+- Filtern Sie nach Einträgen mit/ohne Medien
+
+### 3. Export für rechtliche Zwecke
+- Klicken Sie auf "Export"
+- Wählen Sie das gewünschte Format (PDF empfohlen)
+- Konfigurieren Sie Optionen wie Zeitraum und Bildeinschluss
+- Starten Sie den Export
+
+## 🔒 Sicherheit & Datenschutz
+
+- Alle Daten werden lokal in MongoDB gespeichert
+- Keine Cloud-Synchronisation ohne explizite Konfiguration
+- Bilder werden komprimiert vor der Speicherung
+- Export-Passwortschutz verfügbar (bald)
+
+## 🎨 Design-Prinzipien
+
+- **Mobile First:** Optimiert für Smartphone-Nutzung
+- **Zero Clutter:** Nur wesentliche Elemente sichtbar
+- **Sofortige Reaktion:** Keine unnötigen Ladezeiten
+- **Klarer Sprachstil:** Verständlich ohne juristische Fachbegriffe
+
+## 🐛 Fehlerbehebung
+
+### MongoDB Verbindungsfehler
+```bash
+# Prüfen ob Container läuft
+docker ps
+
+# Container neu starten
+docker-compose restart mongodb
+
+# Logs prüfen
+docker-compose logs mongodb
+```
+
+### Next.js Build Fehler
+```bash
+# Cache löschen
+rm -rf .next
+
+# Dependencies neu installieren
+rm -rf node_modules package-lock.json
+npm install
+
+# Neu builden
 npm run build
 ```
 
 ## 📄 Lizenz
 
-MIT License - siehe [LICENSE](LICENSE) Datei für Details.
+Dieses Projekt ist für private Nutzung entwickelt. Bitte beachten Sie die lokalen Gesetze bezüglich Dokumentation und Datenschutz.
 
 ## 🤝 Beitragen
 
-1. Fork das Repository
-2. Erstellen Sie einen Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Committen Sie Ihre Änderungen (`git commit -m 'Add some AmazingFeature'`)
-4. Pushen Sie den Branch (`git push origin feature/AmazingFeature`)
-5. Öffnen Sie einen Pull Request
+Dies ist ein privates Projekt für spezifische Anwendungsfälle. Für Verbesserungsvorschläge oder Bugs erstellen Sie bitte ein Issue.
 
 ## 📞 Support
 
 Bei Fragen oder Problemen:
-- Öffnen Sie ein [GitHub Issue](issues)
-- Kontaktieren Sie den Entwickler
-
-## 🗺 Roadmap
-
-### Nächste Features
-- [ ] Volltext-Suche in Anhängen
-- [ ] Automatische Backup-Funktionen
-- [ ] Advanced PDF-Layouts
-- [ ] Bulk-Operations für Einträge
-- [ ] Dark Mode
-- [ ] PWA-Funktionalität
-- [ ] API für Drittanbieter-Integrationen
-
----
-
-**CommuniTrack** - Ihre rechtssichere Kommunikationsdokumentation 📝
+1. Prüfen Sie die Dokumentation
+2. Schauen Sie in die Logs: `docker-compose logs`
+3. Erstellen Sie ein Issue mit detaillierter Beschreibung

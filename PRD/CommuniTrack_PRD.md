@@ -57,16 +57,16 @@
 ## 3. Technische Anforderungen
 
 ### 3.1. Frontend
-- **Framework:** Next.js (React)  
+- **Framework:** Latest Next.js 
 - **UI:** Tailwind CSS (modern, lightweight)  
 - **State Management:** Zustand oder Redux Toolkit  
 - **Bildverarbeitung:** Kompression vor Upload, Preview-Rendering
 
 ### 3.2. Backend / Datenbank
-- **Datenbank:** PostgreSQL (z. B. via Supabase)  
-- **File Storage:** Supabase Storage oder Cloudinary  
+- **Datenbank:** MongoDB + Docker Setup  
+- **File Storage:** MongoDB  
 - **APIs:** REST oder GraphQL  
-- **Authentication:** Supabase Auth oder NextAuth
+- **Authentication:** No Auth needed
 
 ### 3.3. Export / Dokumentengenerierung
 - PDF-Export mit `pdf-lib` oder `react-pdf`  

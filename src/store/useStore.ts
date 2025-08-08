@@ -1,88 +1,128 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import type { User, Entry, EntryFilter } from '@/types'
+import { create } from 'zustand';
+import { Entry, FilterOptions, Attachment } from '@/types';
 
-interface AppStore {
-  // User state
-  user: User | null
-  setUser: (user: User | null) => void
+interface AppState {
+  // Entries
+  entries: Entry[];
+  filteredEntries: Entry[];
+  filters: FilterOptions;
   
-  // Entries state
-  entries: Entry[]
-  setEntries: (entries: Entry[]) => void
-  addEntry: (entry: Entry) => void
-  updateEntry: (id: string, entry: Partial<Entry>) => void
-  deleteEntry: (id: string) => void
-  
-  // UI state
-  isLoading: boolean
-  setIsLoading: (loading: boolean) => void
-  error: string | null
-  setError: (error: string | null) => void
-  
-  // Filter state
-  filters: EntryFilter
-  setFilters: (filters: EntryFilter) => void
-  clearFilters: () => void
+  // UI State
+  isLoading: boolean;
+  selectedEntry: Entry | null;
+  isModalOpen: boolean;
   
   // Actions
-  reset: () => void
+  setEntries: (entries: Entry[]) => void;
+  addEntry: (entry: Entry) => void;
+  updateEntry: (id: string, entry: Partial<Entry>) => void;
+  deleteEntry: (id: string) => void;
+  setFilters: (filters: FilterOptions) => void;
+  applyFilters: () => void;
+  setLoading: (loading: boolean) => void;
+  setSelectedEntry: (entry: Entry | null) => void;
+  setModalOpen: (open: boolean) => void;
 }
 
-const initialState = {
-  user: null,
+export const useStore = create<AppState>((set, get) => ({
+  // Initial state
   entries: [],
+  filteredEntries: [],
+  filters: {},
   isLoading: false,
-  error: null,
-  filters: {}
-}
+  selectedEntry: null,
+  isModalOpen: false,
 
-export const useStore = create<AppStore>()(
-  persist(
-    (set, get) => ({
-      ...initialState,
-      
-      setUser: (user) => set({ user }),
-      
-      setEntries: (entries) => set({ entries }),
-      
-      addEntry: (entry) => set((state) => ({
-        entries: [entry, ...state.entries]
-      })),
-      
-      updateEntry: (id, updatedEntry) => set((state) => ({
-        entries: state.entries.map(entry =>
-          entry.id === id ? { ...entry, ...updatedEntry } : entry
-        )
-      })),
-      
-      deleteEntry: (id) => set((state) => ({
-        entries: state.entries.filter(entry => entry.id !== id)
-      })),
-      
-      setIsLoading: (isLoading) => set({ isLoading }),
-      
-      setError: (error) => set({ error }),
-      
-      setFilters: (filters) => set({ filters }),
-      
-      clearFilters: () => set({ filters: {} }),
-      
-      reset: () => set(initialState)
-    }),
-    {
-      name: 'communitrack-store',
-      partialize: (state) => ({ 
-        user: state.user,
-        filters: state.filters 
-      })
+  // Actions
+  setEntries: (entries) => {
+    set({ entries });
+    get().applyFilters();
+  },
+
+  addEntry: (entry) => {
+    const { entries } = get();
+    const newEntries = [entry, ...entries].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    set({ entries: newEntries });
+    get().applyFilters();
+  },
+
+  updateEntry: (id, updatedEntry) => {
+    const { entries } = get();
+    const newEntries = entries.map(entry =>
+      entry._id === id ? { ...entry, ...updatedEntry } : entry
+    );
+    set({ entries: newEntries });
+    get().applyFilters();
+  },
+
+  deleteEntry: (id) => {
+    const { entries } = get();
+    const newEntries = entries.filter(entry => entry._id !== id);
+    set({ entries: newEntries });
+    get().applyFilters();
+  },
+
+  setFilters: (filters) => {
+    set({ filters });
+    get().applyFilters();
+  },
+
+  applyFilters: () => {
+    const { entries, filters } = get();
+    let filtered = [...entries];
+
+    // Filter by date range
+    if (filters.startDate) {
+      filtered = filtered.filter(entry => 
+        new Date(entry.date) >= filters.startDate!
+      );
     }
-  )
-)
+    if (filters.endDate) {
+      filtered = filtered.filter(entry => 
+        new Date(entry.date) <= filters.endDate!
+      );
+    }
 
-// Selectors
-export const useUser = () => useStore((state) => state.user)
-export const useEntries = () => useStore((state) => state.entries)
-export const useFilters = () => useStore((state) => state.filters)
-export const useIsLoading = () => useStore((state) => state.isLoading)
-export const useError = () => useStore((state) => state.error)
+    // Filter by category
+    if (filters.category) {
+      filtered = filtered.filter(entry => entry.category === filters.category);
+    }
+
+    // Filter by search term
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase();
+      filtered = filtered.filter(entry =>
+        entry.title.toLowerCase().includes(searchLower) ||
+        entry.description.toLowerCase().includes(searchLower) ||
+        entry.tags.some(tag => tag.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Filter by media presence
+    if (filters.hasMedia !== undefined) {
+      filtered = filtered.filter(entry =>
+        filters.hasMedia ? entry.attachments.length > 0 : entry.attachments.length === 0
+      );
+    }
+
+    // Filter by importance
+    if (filters.isImportant !== undefined) {
+      filtered = filtered.filter(entry => entry.isImportant === filters.isImportant);
+    }
+
+    // Filter by tags
+    if (filters.tags && filters.tags.length > 0) {
+      filtered = filtered.filter(entry =>
+        filters.tags!.some(tag => entry.tags.includes(tag))
+      );
+    }
+
+    set({ filteredEntries: filtered });
+  },
+
+  setLoading: (loading) => set({ isLoading: loading }),
+  setSelectedEntry: (entry) => set({ selectedEntry: entry }),
+  setModalOpen: (open) => set({ isModalOpen: open }),
+}));

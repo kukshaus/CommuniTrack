@@ -1,265 +1,268 @@
-'use client'
-
-import { useState } from 'react'
-import { useStore } from '@/store/useStore'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { generatePDF, generateJSON, generateCSV } from '@/lib/export'
-import { ExportOptions } from '@/types'
-import { X, FileDown, FileText, Database, Lock } from 'lucide-react'
+import React, { useState } from 'react';
+import { Download, X, FileText, Database, Table, Lock } from 'lucide-react';
+import { ExportOptions } from '@/types';
+import { useStore } from '@/store/useStore';
+import { exportToPDF, exportToJSON, exportToCSV, downloadFile } from '@/lib/export';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import { Card, CardHeader, CardContent } from './ui/Card';
+import LoadingSpinner from './LoadingSpinner';
 
 interface ExportDialogProps {
-  onClose: () => void
+  onClose: () => void;
 }
 
-export default function ExportDialog({ onClose }: ExportDialogProps) {
-  const { entries, filters } = useStore()
-  const [isExporting, setIsExporting] = useState(false)
-  const [exportOptions, setExportOptions] = useState<ExportOptions>({
+const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
+  const { filteredEntries } = useStore();
+  
+  const [options, setOptions] = useState<ExportOptions>({
     format: 'pdf',
-    includeAttachments: true,
-    dateRange: undefined,
-    password: undefined
-  })
-
-  // Filter entries based on current filters
-  const filteredEntries = entries.filter(entry => {
-    if (filters.category && entry.category !== filters.category) return false
-    if (filters.dateFrom && entry.date < filters.dateFrom) return false
-    if (filters.dateTo && entry.date > filters.dateTo) return false
-    if (filters.searchTerm) {
-      const searchLower = filters.searchTerm.toLowerCase()
-      const matchesTitle = entry.title.toLowerCase().includes(searchLower)
-      const matchesDescription = entry.description.toLowerCase().includes(searchLower)
-      const matchesTags = entry.tags.some(tag => tag.toLowerCase().includes(searchLower))
-      if (!matchesTitle && !matchesDescription && !matchesTags) return false
-    }
-    if (filters.important && !entry.important) return false
-    if (filters.hasAttachments && (!entry.attachments || entry.attachments.length === 0)) return false
-    return true
-  })
+    includeImages: true,
+    passwordProtected: false,
+  });
+  
+  const [isExporting, setIsExporting] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    start: '',
+    end: '',
+  });
 
   const handleExport = async () => {
-    if (filteredEntries.length === 0) return
-
-    setIsExporting(true)
+    setIsExporting(true);
+    
     try {
-      let filename: string
-      let blob: Blob
+      const exportOptions: ExportOptions = {
+        ...options,
+        dateRange: dateRange.start && dateRange.end ? {
+          start: new Date(dateRange.start),
+          end: new Date(dateRange.end),
+        } : undefined,
+      };
 
-      switch (exportOptions.format) {
-        case 'pdf':
-          filename = `CommuniTrack_Export_${new Date().toISOString().split('T')[0]}.pdf`
-          blob = await generatePDF(filteredEntries, exportOptions)
-          break
-        case 'json':
-          filename = `CommuniTrack_Export_${new Date().toISOString().split('T')[0]}.json`
-          blob = generateJSON(filteredEntries, exportOptions)
-          break
-        case 'csv':
-          filename = `CommuniTrack_Export_${new Date().toISOString().split('T')[0]}.csv`
-          blob = generateCSV(filteredEntries, exportOptions)
-          break
-        default:
-          throw new Error('Unsupported export format')
+      // Filter entries by date range if specified
+      let entriesToExport = filteredEntries;
+      if (exportOptions.dateRange) {
+        entriesToExport = filteredEntries.filter(entry => {
+          const entryDate = new Date(entry.date);
+          return entryDate >= exportOptions.dateRange!.start && 
+                 entryDate <= exportOptions.dateRange!.end;
+        });
       }
 
-      // Download the file
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      onClose()
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
+      
+      switch (options.format) {
+        case 'pdf':
+          const pdfBlob = await exportToPDF(entriesToExport, exportOptions);
+          downloadFile(pdfBlob, `CommuniTrack_Export_${timestamp}.html`, 'text/html');
+          break;
+          
+        case 'json':
+          const jsonContent = exportToJSON(entriesToExport, exportOptions);
+          downloadFile(jsonContent, `CommuniTrack_Export_${timestamp}.json`, 'application/json');
+          break;
+          
+        case 'csv':
+          const csvContent = exportToCSV(entriesToExport, exportOptions);
+          downloadFile(csvContent, `CommuniTrack_Export_${timestamp}.csv`, 'text/csv');
+          break;
+      }
+      
+      onClose();
     } catch (error) {
-      console.error('Export error:', error)
-      alert('Fehler beim Exportieren. Bitte versuchen Sie es erneut.')
+      console.error('Export error:', error);
+      alert('Fehler beim Exportieren. Bitte versuchen Sie es erneut.');
     } finally {
-      setIsExporting(false)
+      setIsExporting(false);
     }
-  }
+  };
 
-  const formatIcons = {
-    pdf: FileText,
-    json: Database,
-    csv: Database
-  }
-
-  const formatLabels = {
-    pdf: 'PDF - Für Gerichte und offizielle Dokumente',
-    json: 'JSON - Für Entwickler und Datensicherung',
-    csv: 'CSV - Für Excel und Tabellenkalkulationen'
-  }
+  const getEntryCount = () => {
+    if (!dateRange.start || !dateRange.end) {
+      return filteredEntries.length;
+    }
+    
+    return filteredEntries.filter(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate >= new Date(dateRange.start) && 
+             entryDate <= new Date(dateRange.end);
+    }).length;
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-lg">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center">
-              <FileDown className="h-5 w-5 mr-2" />
-              Daten exportieren
-            </CardTitle>
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <Download className="h-5 w-5 mr-2" />
+              Export
+            </h2>
             <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </Button>
           </div>
         </CardHeader>
+        
         <CardContent className="space-y-6">
-          {/* Export Stats */}
-          <div className="p-4 bg-gray-100 rounded-lg">
-            <div className="text-sm text-gray-600 mb-1">
-              Zu exportierende Einträge:
+          {/* Format Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Exportformat
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="pdf"
+                  checked={options.format === 'pdf'}
+                  onChange={(e) => setOptions(prev => ({ ...prev, format: e.target.value as any }))}
+                  className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                />
+                <div className="ml-3 flex items-center">
+                  <FileText className="h-4 w-4 text-red-500 mr-2" />
+                  <span className="text-sm text-gray-700">
+                    HTML (druckbar, empfohlen für rechtliche Zwecke)
+                  </span>
+                </div>
+              </label>
+              
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="json"
+                  checked={options.format === 'json'}
+                  onChange={(e) => setOptions(prev => ({ ...prev, format: e.target.value as any }))}
+                  className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                />
+                <div className="ml-3 flex items-center">
+                  <Database className="h-4 w-4 text-blue-500 mr-2" />
+                  <span className="text-sm text-gray-700">
+                    JSON (vollständige Daten)
+                  </span>
+                </div>
+              </label>
+              
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="csv"
+                  checked={options.format === 'csv'}
+                  onChange={(e) => setOptions(prev => ({ ...prev, format: e.target.value as any }))}
+                  className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                />
+                <div className="ml-3 flex items-center">
+                  <Table className="h-4 w-4 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">
+                    CSV (für Excel/Tabellen)
+                  </span>
+                </div>
+              </label>
             </div>
-            <div className="text-2xl font-bold">
-              {filteredEntries.length}
-            </div>
-            {filteredEntries.length !== entries.length && (
-              <div className="text-xs text-gray-600">
-                (von {entries.length} gefiltert)
-              </div>
-            )}
           </div>
 
-          {/* Format Selection */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Export-Format</label>
-            {(Object.keys(formatLabels) as Array<keyof typeof formatLabels>).map((format) => {
-              const Icon = formatIcons[format]
-              return (
-                <div
-                  key={format}
-                  className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    exportOptions.format === format
-                      ? 'border-blue-500 bg-primary/5'
-                      : 'border-border hover:bg-gray-100/50'
-                  }`}
-                  onClick={() => setExportOptions({ ...exportOptions, format })}
-                >
-                  <input
-                    type="radio"
-                    checked={exportOptions.format === format}
-                    onChange={() => setExportOptions({ ...exportOptions, format })}
-                    className="h-4 w-4"
-                  />
-                  <Icon className="h-5 w-5" />
-                  <div>
-                    <div className="font-medium text-sm">
-                      {format.toUpperCase()}
-                    </div>
-                    <div className="text-xs text-gray-600">
-                      {formatLabels[format]}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+          {/* Date Range */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Zeitraum (optional)
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                placeholder="Von"
+              />
+              <Input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                placeholder="Bis"
+              />
+            </div>
           </div>
 
           {/* Options */}
-          <div className="space-y-4">
-            <label className="text-sm font-medium">Export-Optionen</label>
-            
-            <div className="flex items-center space-x-2">
+          <div className="space-y-3">
+            <label className="flex items-center">
               <input
                 type="checkbox"
-                id="includeAttachments"
-                checked={exportOptions.includeAttachments}
-                onChange={(e) => 
-                  setExportOptions({ 
-                    ...exportOptions, 
-                    includeAttachments: e.target.checked 
-                  })
-                }
-                className="h-4 w-4"
+                checked={options.includeImages}
+                onChange={(e) => setOptions(prev => ({ ...prev, includeImages: e.target.checked }))}
+                className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
               />
-              <label htmlFor="includeAttachments" className="text-sm">
-                Anhänge einbinden
-              </label>
-            </div>
-
-            {exportOptions.format === 'pdf' && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <Lock className="h-4 w-4 mr-2" />
-                  PDF-Passwort (optional)
-                </label>
-                <Input
-                  type="password"
-                  placeholder="Passwort für PDF-Schutz"
-                  value={exportOptions.password || ''}
-                  onChange={(e) => 
-                    setExportOptions({ 
-                      ...exportOptions, 
-                      password: e.target.value || undefined 
-                    })
-                  }
-                />
-                <p className="text-xs text-gray-600">
-                  Lassen Sie das Feld leer für ungeschütztes PDF
-                </p>
-              </div>
-            )}
+              <span className="ml-2 text-sm text-gray-700">
+                Bilder und Anhänge einschließen
+              </span>
+            </label>
+            
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={options.passwordProtected}
+                onChange={(e) => setOptions(prev => ({ ...prev, passwordProtected: e.target.checked }))}
+                className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                Passwortschutz (bald verfügbar)
+              </span>
+            </label>
           </div>
 
-          {/* Date Range Override */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Zeitraum überschreiben (optional)</label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-gray-600">Von</label>
-                <Input
-                  type="date"
-                  value={exportOptions.dateRange?.from || ''}
-                  onChange={(e) => 
-                    setExportOptions({
-                      ...exportOptions,
-                      dateRange: {
-                        from: e.target.value,
-                        to: exportOptions.dateRange?.to || ''
-                      }
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-600">Bis</label>
-                <Input
-                  type="date"
-                  value={exportOptions.dateRange?.to || ''}
-                  onChange={(e) => 
-                    setExportOptions({
-                      ...exportOptions,
-                      dateRange: {
-                        from: exportOptions.dateRange?.from || '',
-                        to: e.target.value
-                      }
-                    })
-                  }
-                />
-              </div>
+          {/* Password Field */}
+          {options.passwordProtected && (
+            <Input
+              type="password"
+              label="Passwort"
+              value={options.password || ''}
+              onChange={(e) => setOptions(prev => ({ ...prev, password: e.target.value }))}
+              placeholder="Passwort für den Export"
+              icon={<Lock className="h-4 w-4" />}
+            />
+          )}
+
+          {/* Summary */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">
+              Export-Zusammenfassung
+            </h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>Format: {options.format.toUpperCase()}</p>
+              <p>Einträge: {getEntryCount()}</p>
+              <p>Bilder: {options.includeImages ? 'Enthalten' : 'Nicht enthalten'}</p>
+              {dateRange.start && dateRange.end && (
+                <p>Zeitraum: {dateRange.start} bis {dateRange.end}</p>
+              )}
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button variant="outline" onClick={onClose} disabled={isExporting}>
               Abbrechen
             </Button>
             <Button 
               onClick={handleExport} 
-              disabled={isExporting || filteredEntries.length === 0}
+              disabled={isExporting || getEntryCount() === 0}
+              className="flex items-center"
             >
-              {isExporting ? 'Exportiere...' : 'Exportieren'}
+              {isExporting ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Exportiere...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export starten
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
       </Card>
     </div>
-  )
-}
+  );
+};
+
+export default ExportDialog;
