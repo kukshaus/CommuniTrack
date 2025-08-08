@@ -7,8 +7,12 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'CommuniTrack - Private Kommunikationsdokumentation',
   description: 'Dokumentation, Organisation und Export von kommunikationsbezogenen Ereignissen',
-  viewport: 'width=device-width, initial-scale=1',
   robots: 'noindex, nofollow', // Privacy: Don't index this app
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({

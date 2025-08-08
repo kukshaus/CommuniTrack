@@ -48,6 +48,33 @@ npm install
 
 ### 3. Supabase Setup
 
+#### Option A: Geführtes Setup (Empfohlen)
+
+1. Erstellen Sie ein neues Projekt auf [supabase.com](https://supabase.com)
+2. Erstellen Sie eine \`.env.local\` Datei mit Ihren Supabase-Credentials (siehe nächster Schritt)
+3. Führen Sie das geführte Setup aus:
+
+\`\`\`bash
+npm run setup:manual
+\`\`\`
+
+Das Script führt Sie Schritt für Schritt durch die Einrichtung ohne zusätzliche Tools.
+
+#### Option B: Automatisches Setup (benötigt Supabase CLI)
+
+1. Installieren Sie die Supabase CLI:
+   - **Windows**: \`scoop install supabase\` oder \`choco install supabase\`
+   - **macOS**: \`brew install supabase/tap/supabase\`
+   - **Linux**: Siehe [Supabase CLI Docs](https://supabase.com/docs/guides/cli/getting-started)
+
+2. Führen Sie das automatische Setup aus:
+
+\`\`\`bash
+npm run setup
+\`\`\`
+
+#### Option C: Komplett manuelles Setup
+
 1. Erstellen Sie ein neues Projekt auf [supabase.com](https://supabase.com)
 2. Führen Sie das SQL-Schema aus \`supabase_schema.sql\` in Ihrem Supabase SQL Editor aus
 3. Erstellen Sie einen Storage Bucket namens "attachments"
@@ -55,12 +82,23 @@ npm install
 
 ### 4. Umgebungsvariablen
 
-Erstellen Sie eine \`.env.local\` Datei:
+Erstellen Sie eine \`.env.local\` Datei im Projektverzeichnis:
 
 \`\`\`env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 \`\`\`
+
+**So erhalten Sie diese Werte:**
+1. Gehen Sie zu [supabase.com](https://supabase.com) und melden Sie sich an
+2. Wählen Sie Ihr Projekt aus oder erstellen Sie ein neues
+3. Gehen Sie zu **Settings → API**
+4. Kopieren Sie die **Project URL** (NEXT_PUBLIC_SUPABASE_URL)
+5. Kopieren Sie den **anon/public key** (NEXT_PUBLIC_SUPABASE_ANON_KEY)
+6. Ersetzen Sie die Werte in der \`.env.local\` Datei
+
+**Wichtig:** Die Datei muss genau \`.env.local\` heißen (nicht \`.env\` oder \`.env.example\`)
 
 ### 5. Entwicklungsserver starten
 

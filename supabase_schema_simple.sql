@@ -1,4 +1,7 @@
--- Enable UUID extension
+-- CommuniTrack Database Schema (Simplified Version)
+-- This version avoids operations that require superuser privileges
+
+-- Enable UUID extension (should work in most Supabase instances)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create categories table
@@ -52,23 +55,29 @@ ALTER TABLE entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for categories (public read)
+DROP POLICY IF EXISTS "Categories are viewable by everyone" ON categories;
 CREATE POLICY "Categories are viewable by everyone" ON categories
   FOR SELECT USING (true);
 
 -- RLS Policies for entries
+DROP POLICY IF EXISTS "Users can view their own entries" ON entries;
 CREATE POLICY "Users can view their own entries" ON entries
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own entries" ON entries;
 CREATE POLICY "Users can insert their own entries" ON entries
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own entries" ON entries;
 CREATE POLICY "Users can update their own entries" ON entries
   FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own entries" ON entries;
 CREATE POLICY "Users can delete their own entries" ON entries
   FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for attachments
+DROP POLICY IF EXISTS "Users can view attachments of their entries" ON attachments;
 CREATE POLICY "Users can view attachments of their entries" ON attachments
   FOR SELECT USING (
     EXISTS (
@@ -78,6 +87,7 @@ CREATE POLICY "Users can view attachments of their entries" ON attachments
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert attachments to their entries" ON attachments;
 CREATE POLICY "Users can insert attachments to their entries" ON attachments
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -87,6 +97,7 @@ CREATE POLICY "Users can insert attachments to their entries" ON attachments
     )
   );
 
+DROP POLICY IF EXISTS "Users can update attachments of their entries" ON attachments;
 CREATE POLICY "Users can update attachments of their entries" ON attachments
   FOR UPDATE USING (
     EXISTS (
@@ -96,6 +107,7 @@ CREATE POLICY "Users can update attachments of their entries" ON attachments
     )
   );
 
+DROP POLICY IF EXISTS "Users can delete attachments of their entries" ON attachments;
 CREATE POLICY "Users can delete attachments of their entries" ON attachments
   FOR DELETE USING (
     EXISTS (
@@ -115,54 +127,11 @@ END;
 $$ language 'plpgsql';
 
 -- Create trigger for entries table
+DROP TRIGGER IF EXISTS update_entries_updated_at ON entries;
 CREATE TRIGGER update_entries_updated_at 
     BEFORE UPDATE ON entries 
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- Create storage bucket for attachments (if not exists)
--- Note: This may require manual creation in Supabase Dashboard if permissions are insufficient
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'attachments') THEN
-        INSERT INTO storage.buckets (id, name, public)
-        VALUES ('attachments', 'attachments', false);
-    END IF;
-EXCEPTION
-    WHEN insufficient_privilege THEN
-        -- Bucket creation requires admin privileges
-        -- Please create manually in Supabase Dashboard > Storage
-        NULL;
-END $$;
-
--- Storage policies (will be created if storage.objects table exists)
-DO $$
-BEGIN
-    -- Check if storage.objects table exists before creating policies
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
-        
-        -- Drop existing policies if they exist
-        DROP POLICY IF EXISTS "Users can upload attachments" ON storage.objects;
-        DROP POLICY IF EXISTS "Users can view their own attachments" ON storage.objects;
-        DROP POLICY IF EXISTS "Users can delete their own attachments" ON storage.objects;
-        
-        -- Create new policies
-        CREATE POLICY "Users can upload attachments"
-        ON storage.objects FOR INSERT
-        WITH CHECK (bucket_id = 'attachments' AND auth.uid()::text = (storage.foldername(name))[1]);
-
-        CREATE POLICY "Users can view their own attachments"
-        ON storage.objects FOR SELECT
-        USING (bucket_id = 'attachments' AND auth.uid()::text = (storage.foldername(name))[1]);
-
-        CREATE POLICY "Users can delete their own attachments"
-        ON storage.objects FOR DELETE
-        USING (bucket_id = 'attachments' AND auth.uid()::text = (storage.foldername(name))[1]);
-        
-    END IF;
-EXCEPTION
-    WHEN insufficient_privilege THEN
-        -- Storage policies require admin privileges
-        -- Please ensure storage is properly configured in Supabase Dashboard
-        NULL;
-END $$;
+-- Note: Storage bucket and policies need to be created manually in Supabase Dashboard
+-- Go to Storage > Create bucket named "attachments" (set to Private)
