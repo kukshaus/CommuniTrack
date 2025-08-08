@@ -145,7 +145,7 @@ export default function FilterBar() {
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-1">
                      {filters.searchTerm && (
-             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-primary/10 text-primary">
+             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
                Suche: &quot;{filters.searchTerm}&quot;
              </span>
            )}

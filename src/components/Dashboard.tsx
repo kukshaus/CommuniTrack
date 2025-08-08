@@ -67,7 +67,7 @@ export default function Dashboard() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-primary">CommuniTrack</h1>
+              <h1 className="text-2xl font-bold text-blue-600">CommuniTrack</h1>
                               <p className="text-sm text-gray-600">
                 Willkommen zurück, {user?.email}
               </p>

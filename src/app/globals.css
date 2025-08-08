@@ -38,6 +38,6 @@
   }
 
   .drag-over {
-    @apply border-primary border-2 border-dashed bg-primary/5;
+    @apply border-blue-500 border-2 border-dashed bg-blue-500/5;
   }
 }

@@ -33,7 +33,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">
+          <CardTitle className="text-2xl font-bold text-blue-600">
             CommuniTrack
           </CardTitle>
           <CardDescription>
@@ -110,7 +110,7 @@ export default function AuthPage() {
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-primary hover:underline"
+              className="text-sm text-blue-600 hover:underline"
             >
               {isLogin 
                 ? 'Noch kein Konto? Hier registrieren' 

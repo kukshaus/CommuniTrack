@@ -136,8 +136,8 @@ export default function ExportDialog({ onClose }: ExportDialogProps) {
                   key={format}
                   className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors ${
                     exportOptions.format === format
-                      ? 'border-blue-500 bg-primary/5'
-                      : 'border-border hover:bg-gray-100/50'
+                      ? 'border-blue-500 bg-blue-500/5'
+                      : 'border-gray-300 hover:bg-gray-100/50'
                   }`}
                   onClick={() => setExportOptions({ ...exportOptions, format })}
                 >

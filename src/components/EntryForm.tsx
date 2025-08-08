@@ -317,7 +317,7 @@ export default function EntryForm({ onClose, onSuccess, entry }: EntryFormProps)
               {/* Drop Zone */}
               <div
                 className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                  dragOver ? 'border-blue-500 bg-primary/5' : 'border-muted-foreground/25'
+                  dragOver ? 'border-blue-500 bg-blue-500/5' : 'border-gray-300'
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
