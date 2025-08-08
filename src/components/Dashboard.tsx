@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Plus, Download, FileText, Settings } from 'lucide-react';
 import { Entry } from '@/types';
 import { useStore } from '@/store/useStore';
@@ -10,7 +10,12 @@ import FilterBar from './FilterBar';
 import ExportDialog from './ExportDialog';
 import LoadingSpinner from './LoadingSpinner';
 
-const Dashboard: React.FC = () => {
+export interface DashboardRef {
+  handleNewEntry: () => void;
+  handleExport: () => void;
+}
+
+const Dashboard = forwardRef<DashboardRef>((props, ref) => {
   const { 
     entries, 
     filteredEntries, 
@@ -20,7 +25,8 @@ const Dashboard: React.FC = () => {
     selectedEntry,
     setSelectedEntry,
     isModalOpen,
-    setModalOpen
+    setModalOpen,
+    user
   } = useStore();
   
   const [showEntryForm, setShowEntryForm] = useState(false);
@@ -52,6 +58,16 @@ const Dashboard: React.FC = () => {
     setShowEntryForm(true);
   };
 
+  const handleExport = () => {
+    setShowExportDialog(true);
+  };
+
+  // Expose functions to parent component via ref
+  useImperativeHandle(ref, () => ({
+    handleNewEntry,
+    handleExport,
+  }));
+
   const handleEditEntry = (entry: Entry) => {
     setEditingEntry(entry);
     setShowEntryForm(true);
@@ -63,10 +79,12 @@ const Dashboard: React.FC = () => {
   };
 
   const getStats = () => {
-    const totalEntries = entries.length;
-    const importantEntries = entries.filter(e => e.isImportant).length;
-    const entriesWithMedia = entries.filter(e => e.attachments.length > 0).length;
-    const categories = new Set(entries.map(e => e.category)).size;
+    // Use filteredEntries which are already filtered by current user
+    const userEntries = filteredEntries.length > 0 ? filteredEntries : entries.filter(e => e.userId === user?.id);
+    const totalEntries = userEntries.length;
+    const importantEntries = userEntries.filter(e => e.isImportant).length;
+    const entriesWithMedia = userEntries.filter(e => e.attachments.length > 0).length;
+    const categories = new Set(userEntries.map(e => e.category)).size;
     
     return {
       totalEntries,
@@ -90,36 +108,7 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <FileText className="h-8 w-8 text-primary-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">
-                CommuniTrack
-              </h1>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowExportDialog(true)}
-                disabled={entries.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Button onClick={handleNewEntry}>
-                <Plus className="h-4 w-4 mr-2" />
-                Neuer Eintrag
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="bg-gray-50">
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
@@ -253,6 +242,6 @@ const Dashboard: React.FC = () => {
       )}
     </div>
   );
-};
+});
 
 export default Dashboard;

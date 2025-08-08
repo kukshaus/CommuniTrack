@@ -23,7 +23,7 @@ const CATEGORIES: { value: EntryCategory; label: string }[] = [
 ];
 
 const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
-  const { addEntry, updateEntry, setLoading } = useStore();
+  const { addEntry, updateEntry, setLoading, user } = useStore();
   
   const [formData, setFormData] = useState({
     title: entry?.title || '',
@@ -103,6 +103,7 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
         attachments: [...(entry?.attachments || []), ...attachments],
         createdAt: entry?.createdAt || new Date(),
         updatedAt: new Date(),
+        userId: user?.id || '', // Assign entry to current user
       };
 
       if (entry?._id) {

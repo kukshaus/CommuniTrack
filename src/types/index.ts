@@ -9,6 +9,7 @@ export interface Entry {
   isImportant: boolean;
   createdAt: Date;
   updatedAt: Date;
+  userId: string; // Benutzer-spezifische Einträge
 }
 
 export interface Attachment {
@@ -50,4 +51,17 @@ export interface ExportOptions {
     start: Date;
     end: Date;
   };
+}
+
+export interface User {
+  id: string;
+  username: string;
+  name: string;
+  role: 'admin' | 'user';
+}
+
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
 }
