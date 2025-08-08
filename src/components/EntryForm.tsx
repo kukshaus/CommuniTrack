@@ -172,6 +172,7 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
               error={errors.title}
               placeholder="Kurzer aussagekräftiger Titel..."
               icon={<FileText className="h-4 w-4" />}
+              required
             />
 
             {/* Date and Time */}
@@ -205,6 +206,7 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Beschreibung
+                <span className="text-red-500 ml-1">*</span>
               </label>
               <textarea
                 value={formData.description}

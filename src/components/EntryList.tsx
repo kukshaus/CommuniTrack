@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Calendar, 
   Image as ImageIcon, 
@@ -8,11 +8,12 @@ import {
   Tag,
   MoreVertical 
 } from 'lucide-react';
-import { Entry } from '@/types';
+import { Entry, Attachment } from '@/types';
 import { useStore } from '@/store/useStore';
 import { formatDate } from '@/lib/utils';
 import Button from './ui/Button';
 import { Card, CardContent } from './ui/Card';
+import ImageModal from './ImageModal';
 
 interface EntryListProps {
   onEditEntry: (entry: Entry) => void;
@@ -20,6 +21,18 @@ interface EntryListProps {
 
 const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
   const { filteredEntries, deleteEntry, setLoading } = useStore();
+  const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleImageClick = (attachment: Attachment) => {
+    setSelectedImage(attachment);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedImage(null);
+  };
 
   const handleDeleteEntry = async (entryId: string) => {
     if (!confirm('Sind Sie sicher, dass Sie diesen Eintrag löschen möchten?')) {
@@ -166,6 +179,7 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
                           <AttachmentPreview
                             key={attachIndex}
                             attachment={attachment}
+                            onImageClick={handleImageClick}
                           />
                         ))}
                       </div>
@@ -192,24 +206,26 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
           </div>
         ))}
       </div>
+
+      {/* Image Modal */}
+      <ImageModal
+        attachment={selectedImage}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };
 
 interface AttachmentPreviewProps {
-  attachment: any;
+  attachment: Attachment;
+  onImageClick: (attachment: Attachment) => void;
 }
 
-const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment }) => {
+const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onImageClick }) => {
   const handleClick = () => {
-    if (attachment.url.startsWith('data:image/')) {
-      // Open image in new tab
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(`
-          <img src="${attachment.url}" style="max-width: 100%; height: auto;" />
-        `);
-      }
+    if (attachment.fileType.startsWith('image/')) {
+      onImageClick(attachment);
     }
   };
 
