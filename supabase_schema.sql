@@ -1,171 +1,142 @@
--- Enable Row Level Security
-alter database postgres set "app.jwt_secret" to 'your-jwt-secret';
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create custom types
-create type entry_category as enum (
-  'konflikt',
-  'gespraech', 
-  'verhalten',
-  'beweis',
-  'kindbetreuung',
-  'sonstiges'
+-- Enable RLS (Row Level Security)
+ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
+
+-- Create categories table
+CREATE TABLE IF NOT EXISTS categories (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  color VARCHAR(7) DEFAULT '#6366f1',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create users table (extends auth.users)
-create table public.users (
-  id uuid references auth.users(id) on delete cascade primary key,
-  email text unique not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+-- Insert default categories
+INSERT INTO categories (name, color) VALUES
+  ('Konflikt', '#ef4444'),
+  ('Gespräch', '#3b82f6'),
+  ('Verhalten', '#f59e0b'),
+  ('Beweis', '#10b981'),
+  ('Kindbetreuung', '#8b5cf6'),
+  ('Sonstiges', '#6b7280')
+ON CONFLICT (name) DO NOTHING;
 
 -- Create entries table
-create table public.entries (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references public.users(id) on delete cascade not null,
-  title text not null,
-  description text not null default '',
-  category entry_category not null default 'sonstiges',
-  date date not null default current_date,
-  time time not null default current_time,
-  important boolean not null default false,
-  tags text[] not null default '{}',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE IF NOT EXISTS entries (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  category_id UUID REFERENCES categories(id),
+  event_date TIMESTAMP WITH TIME ZONE NOT NULL,
+  is_important BOOLEAN DEFAULT FALSE,
+  tags TEXT[] DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create attachments table
-create table public.attachments (
-  id uuid default gen_random_uuid() primary key,
-  entry_id uuid references public.entries(id) on delete cascade not null,
-  filename text not null,
-  file_path text not null,
-  file_size bigint not null,
-  mime_type text not null,
-  context text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+CREATE TABLE IF NOT EXISTS attachments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  entry_id UUID REFERENCES entries(id) ON DELETE CASCADE,
+  file_name VARCHAR(255) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  file_size INTEGER,
+  file_type VARCHAR(100),
+  is_important BOOLEAN DEFAULT FALSE,
+  context TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create indexes for better performance
-create index entries_user_id_idx on public.entries(user_id);
-create index entries_date_idx on public.entries(date desc);
-create index entries_category_idx on public.entries(category);
-create index entries_important_idx on public.entries(important);
-create index entries_tags_idx on public.entries using gin(tags);
-create index attachments_entry_id_idx on public.attachments(entry_id);
+-- Enable RLS on all tables
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 
--- Enable Row Level Security
-alter table public.users enable row level security;
-alter table public.entries enable row level security;
-alter table public.attachments enable row level security;
+-- RLS Policies for categories (public read)
+CREATE POLICY "Categories are viewable by everyone" ON categories
+  FOR SELECT USING (true);
 
--- Create RLS policies for users table
-create policy "Users can view own profile" on public.users
-  for select using (auth.uid() = id);
+-- RLS Policies for entries
+CREATE POLICY "Users can view their own entries" ON entries
+  FOR SELECT USING (auth.uid() = user_id);
 
-create policy "Users can update own profile" on public.users
-  for update using (auth.uid() = id);
+CREATE POLICY "Users can insert their own entries" ON entries
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-create policy "Users can insert own profile" on public.users
-  for insert with check (auth.uid() = id);
+CREATE POLICY "Users can update their own entries" ON entries
+  FOR UPDATE USING (auth.uid() = user_id);
 
--- Create RLS policies for entries table
-create policy "Users can view own entries" on public.entries
-  for select using (auth.uid() = user_id);
+CREATE POLICY "Users can delete their own entries" ON entries
+  FOR DELETE USING (auth.uid() = user_id);
 
-create policy "Users can insert own entries" on public.entries
-  for insert with check (auth.uid() = user_id);
-
-create policy "Users can update own entries" on public.entries
-  for update using (auth.uid() = user_id);
-
-create policy "Users can delete own entries" on public.entries
-  for delete using (auth.uid() = user_id);
-
--- Create RLS policies for attachments table
-create policy "Users can view own attachments" on public.attachments
-  for select using (
-    auth.uid() = (
-      select user_id from public.entries where id = attachments.entry_id
+-- RLS Policies for attachments
+CREATE POLICY "Users can view attachments of their entries" ON attachments
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM entries 
+      WHERE entries.id = attachments.entry_id 
+      AND entries.user_id = auth.uid()
     )
   );
 
-create policy "Users can insert own attachments" on public.attachments
-  for insert with check (
-    auth.uid() = (
-      select user_id from public.entries where id = attachments.entry_id
+CREATE POLICY "Users can insert attachments to their entries" ON attachments
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM entries 
+      WHERE entries.id = attachments.entry_id 
+      AND entries.user_id = auth.uid()
     )
   );
 
-create policy "Users can update own attachments" on public.attachments
-  for update using (
-    auth.uid() = (
-      select user_id from public.entries where id = attachments.entry_id
+CREATE POLICY "Users can update attachments of their entries" ON attachments
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM entries 
+      WHERE entries.id = attachments.entry_id 
+      AND entries.user_id = auth.uid()
     )
   );
 
-create policy "Users can delete own attachments" on public.attachments
-  for delete using (
-    auth.uid() = (
-      select user_id from public.entries where id = attachments.entry_id
+CREATE POLICY "Users can delete attachments of their entries" ON attachments
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM entries 
+      WHERE entries.id = attachments.entry_id 
+      AND entries.user_id = auth.uid()
     )
   );
 
--- Create function to automatically update updated_at timestamp
-create or replace function update_updated_at_column()
-returns trigger as $$
-begin
-  new.updated_at = timezone('utc'::text, now());
-  return new;
-end;
-$$ language plpgsql;
+-- Create function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
 
--- Create triggers for updated_at
-create trigger update_users_updated_at before update on public.users
-  for each row execute procedure update_updated_at_column();
-
-create trigger update_entries_updated_at before update on public.entries
-  for each row execute procedure update_updated_at_column();
-
--- Create function to handle user registration
-create or replace function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.users (id, email)
-  values (new.id, new.email);
-  return new;
-end;
-$$ language plpgsql security definer;
-
--- Create trigger for new user registration
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+-- Create trigger for entries table
+CREATE TRIGGER update_entries_updated_at 
+    BEFORE UPDATE ON entries 
+    FOR EACH ROW 
+    EXECUTE FUNCTION update_updated_at_column();
 
 -- Create storage bucket for attachments
-insert into storage.buckets (id, name, public) values ('attachments', 'attachments', false);
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('attachments', 'attachments', false)
+ON CONFLICT (id) DO NOTHING;
 
--- Create storage policies
-create policy "Users can upload own attachments" on storage.objects
-  for insert with check (
-    bucket_id = 'attachments' and
-    auth.uid()::text = (storage.foldername(name))[1]
-  );
+-- Storage policies
+CREATE POLICY "Users can upload attachments"
+ON storage.objects FOR INSERT
+WITH CHECK (bucket_id = 'attachments' AND auth.uid()::text = (storage.foldername(name))[1]);
 
-create policy "Users can view own attachments" on storage.objects
-  for select using (
-    bucket_id = 'attachments' and
-    auth.uid()::text = (storage.foldername(name))[1]
-  );
+CREATE POLICY "Users can view their own attachments"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'attachments' AND auth.uid()::text = (storage.foldername(name))[1]);
 
-create policy "Users can update own attachments" on storage.objects
-  for update using (
-    bucket_id = 'attachments' and
-    auth.uid()::text = (storage.foldername(name))[1]
-  );
-
-create policy "Users can delete own attachments" on storage.objects
-  for delete using (
-    bucket_id = 'attachments' and
-    auth.uid()::text = (storage.foldername(name))[1]
-  );
+CREATE POLICY "Users can delete their own attachments"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'attachments' AND auth.uid()::text = (storage.foldername(name))[1]);

@@ -1,23 +1,33 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { useStore } from '@/store/useStore'
-import AuthPage from '@/components/AuthPage'
-import Dashboard from '@/components/Dashboard'
-import LoadingSpinner from '@/components/LoadingSpinner'
+import { useEffect, useState } from 'react';
+import { AuthPage } from '@/components/AuthPage';
+import { Dashboard } from '@/components/Dashboard';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/hooks/useAuth';
 
-export default function HomePage() {
-  const { isAuthenticated } = useAuth()
-  const { isLoading } = useStore()
+export default function Home() {
+  const { user, loading } = useAuth();
+  const [mounted, setMounted] = useState(false);
 
-  if (isLoading) {
-    return <LoadingSpinner />
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <LoadingSpinner size="lg" />
+          <p className="text-muted-foreground">CommuniTrack wird geladen...</p>
+        </div>
+      </div>
+    );
   }
 
-  return (
-    <main className="min-h-screen bg-white">
-      {isAuthenticated ? <Dashboard /> : <AuthPage />}
-    </main>
-  )
+  if (!user) {
+    return <AuthPage />;
+  }
+
+  return <Dashboard />;
 }

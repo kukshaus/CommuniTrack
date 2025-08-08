@@ -1,184 +1,192 @@
 # CommuniTrack
 
-Eine moderne Web-Anwendung zur **Dokumentation, Organisation und Export** von kommunikationsbezogenen Ereignissen mit einer Ex-Partnerin oder anderen wichtigen Personen. CommuniTrack hilft dabei, wichtige Gespräche, Konflikte und Beweise rechtssicher zu dokumentieren.
+Eine moderne Web-App zur privaten Dokumentation, Organisation und Export von kommunikationsbezogenen Ereignissen.
 
 ## 🚀 Features
 
-### ✅ MVP Features (implementiert)
-- **Benutzerauthentifizierung** - Sichere Anmeldung und Registrierung
-- **Eintragsverwaltung** - Erstellen, bearbeiten und löschen von Einträgen
-- **Kategorisierung** - Einträge nach Kategorien organisieren (Konflikt, Gespräch, Verhalten, etc.)
-- **Medienhandling** - Drag & Drop und Copy/Paste für Bilder
-- **Chronologische Ansicht** - Zeitgesteuerte Darstellung aller Einträge
-- **Erweiterte Filterung** - Nach Kategorie, Datum, Stichwörtern und mehr filtern
-- **Export-Funktionen** - PDF, JSON und CSV Export für rechtliche Zwecke
+- **📝 Eintragsverwaltung**: Erstellen, bearbeiten und organisieren von Ereignissen mit Titel, Beschreibung, Datum und Kategorien
+- **🏷️ Kategorisierung**: Vordefinierte Kategorien (Konflikt, Gespräch, Verhalten, Beweis, Kindbetreuung, etc.)
+- **📎 Datei-Upload**: Drag & Drop und Copy-Paste Unterstützung für Bilder und Dokumente
+- **🔍 Filter & Suche**: Umfangreiche Filter- und Suchfunktionen nach Zeitraum, Kategorie, Tags und mehr
+- **📄 Export-Funktionen**: PDF, JSON und CSV Export mit verschiedenen Optionen
+- **⭐ Wichtige Einträge**: Markierung wichtiger Ereignisse
+- **🏷️ Tagging-System**: Flexible Tag-Verwaltung für bessere Organisation
+- **📱 Responsive Design**: Mobile-first Design für alle Geräte
+- **🔐 Sichere Authentifizierung**: Benutzer-Login mit Supabase Auth
+- **☁️ Cloud-Speicherung**: Verschlüsselte Datenspeicherung mit Supabase
 
-### 🔧 Technische Features
-- **Mobile First** - Responsive Design für alle Geräte
-- **Schnelle Performance** - Optimiert für sofortige Reaktionen
-- **Sichere Datenspeicherung** - Verschlüsselte Cloud-Speicherung mit Supabase
-- **Moderne UI** - Minimalistische, ablenkungsfreie Benutzeroberfläche
-- **Offline-fähig** - Lokale Speicherung für bessere Performance
+## 🛠️ Technologie-Stack
 
-## 🛠 Tech Stack
-
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS, Lucide Icons
+- **Frontend**: Next.js 14, React, TypeScript
+- **Styling**: Tailwind CSS mit Custom Design System
 - **State Management**: Zustand
 - **Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **Forms**: React Hook Form + Zod Validation
-- **PDF Generation**: pdf-lib
-- **Deployment**: Vercel-ready
+- **File Upload**: React Dropzone mit Copy-Paste Support
+- **Export**: jsPDF, FileSaver.js
+- **Icons**: Lucide React
 
 ## 📦 Installation
 
 ### Voraussetzungen
-- Node.js 18+
+
+- Node.js 18+ 
 - npm oder yarn
 - Supabase Account
 
 ### 1. Repository klonen
-```bash
+
+\`\`\`bash
 git clone <repository-url>
-cd CommuniTrack
-```
+cd communitrack
+\`\`\`
 
 ### 2. Dependencies installieren
-```bash
+
+\`\`\`bash
 npm install
-```
+\`\`\`
 
-### 3. Umgebungsvariablen einrichten
-```bash
-cp .env.local.example .env.local
-```
+### 3. Supabase Setup
 
-Bearbeiten Sie `.env.local` mit Ihren Supabase-Credentials:
-```env
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
-NEXTAUTH_SECRET=your-nextauth-secret
-NEXTAUTH_URL=http://localhost:3000
-```
+1. Erstellen Sie ein neues Projekt auf [supabase.com](https://supabase.com)
+2. Führen Sie das SQL-Schema aus \`supabase_schema.sql\` in Ihrem Supabase SQL Editor aus
+3. Erstellen Sie einen Storage Bucket namens "attachments"
+4. Kopieren Sie Ihre Supabase URL und anon key
 
-### 4. Supabase Datenbank einrichten
+### 4. Umgebungsvariablen
 
-1. Erstellen Sie ein neues Supabase Projekt
-2. Führen Sie das SQL-Schema aus der Datei `supabase_schema.sql` in der Supabase SQL-Konsole aus
-3. Aktivieren Sie Row Level Security (RLS) in den Supabase-Einstellungen
+Erstellen Sie eine \`.env.local\` Datei:
+
+\`\`\`env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+\`\`\`
 
 ### 5. Entwicklungsserver starten
-```bash
+
+\`\`\`bash
 npm run dev
-```
+\`\`\`
 
-Die App läuft dann unter [http://localhost:3000](http://localhost:3000).
+Die App ist nun unter [http://localhost:3000](http://localhost:3000) verfügbar.
 
-## 🏗 Projektstruktur
+## 📋 Erste Schritte
 
-```
+1. **Registrierung**: Erstellen Sie ein neues Benutzerkonto
+2. **Erster Eintrag**: Klicken Sie auf "Neuer Eintrag" um Ihr erstes Ereignis zu dokumentieren
+3. **Dateien hinzufügen**: Verwenden Sie Drag & Drop oder Copy-Paste um Bilder und Dokumente hinzuzufügen
+4. **Organisieren**: Nutzen Sie Kategorien und Tags zur besseren Organisation
+5. **Exportieren**: Exportieren Sie Ihre Daten als PDF für rechtliche Zwecke
+
+## 🗂️ Dateistruktur
+
+\`\`\`
 src/
 ├── app/                    # Next.js App Router
-├── components/             # React-Komponenten
-│   ├── ui/                # Wiederverwendbare UI-Komponenten
+├── components/             # React Komponenten
+│   ├── ui/                # Basis UI Komponenten
 │   ├── AuthPage.tsx       # Authentifizierung
-│   ├── Dashboard.tsx      # Hauptdashboard
-│   ├── EntryForm.tsx      # Eintragsformular
-│   ├── EntryList.tsx      # Eintragsliste
-│   ├── FilterBar.tsx      # Filterkomponente
+│   ├── Dashboard.tsx      # Haupt-Dashboard
+│   ├── EntryForm.tsx      # Formular für Einträge
+│   ├── EntryList.tsx      # Liste der Einträge
+│   ├── FilterBar.tsx      # Filter-Komponente
+│   ├── FileUpload.tsx     # Datei-Upload mit Drag & Drop
 │   └── ExportDialog.tsx   # Export-Dialog
 ├── hooks/                 # Custom React Hooks
-├── lib/                   # Utilities und Konfiguration
+├── lib/                   # Utility-Funktionen
 ├── store/                 # Zustand Store
-├── types/                 # TypeScript Definitionen
-└── styles/               # CSS Dateien
-```
+└── types/                 # TypeScript Definitionen
+\`\`\`
 
-## 📱 Verwendung
+## 🔧 Konfiguration
 
-### Ersten Eintrag erstellen
-1. Registrieren Sie sich oder melden Sie sich an
-2. Klicken Sie auf "Neuer Eintrag"
-3. Füllen Sie alle erforderlichen Felder aus
-4. Fügen Sie optional Bilder per Drag & Drop oder Copy/Paste hinzu
-5. Speichern Sie den Eintrag
+### Supabase Policies
 
-### Einträge filtern und suchen
-- Nutzen Sie die Suchleiste für Volltext-Suche
-- Filtern Sie nach Kategorie, Datum oder Wichtigkeit
-- Kombinieren Sie mehrere Filter für präzise Ergebnisse
+Die App verwendet Row Level Security (RLS). Alle notwendigen Policies sind im \`supabase_schema.sql\` enthalten.
 
-### Daten exportieren
-1. Klicken Sie auf "Export" in der oberen Navigation
-2. Wählen Sie das gewünschte Format (PDF, JSON, CSV)
-3. Konfigurieren Sie die Export-Optionen
-4. Laden Sie die generierte Datei herunter
+### Storage Setup
 
-## 🔒 Sicherheit
+1. Gehen Sie zu Storage in Ihrem Supabase Dashboard
+2. Erstellen Sie einen neuen Bucket namens "attachments"
+3. Setzen Sie den Bucket auf "Private"
+4. Die notwendigen Storage Policies sind bereits im Schema enthalten
 
-- **Row Level Security (RLS)** - Jeder Benutzer kann nur seine eigenen Daten sehen
-- **Sichere Authentifizierung** - Passwort-basiert mit Supabase Auth
-- **Verschlüsselte Speicherung** - Alle Daten werden verschlüsselt in der Cloud gespeichert
-- **DSGVO-konform** - Datenschutz nach europäischen Standards
+## 📱 Mobile Optimierung
+
+Die App ist vollständig responsive und wurde mobile-first entwickelt:
+
+- Touch-freundliche Bedienelemente
+- Optimierte Layouts für kleine Bildschirme
+- Copy-Paste Unterstützung auf mobilen Geräten
+- Schnelle Ladezeiten
+
+## 🔒 Sicherheit & Datenschutz
+
+- **Row Level Security**: Benutzer sehen nur ihre eigenen Daten
+- **Sichere Authentifizierung**: E-Mail/Passwort mit Supabase Auth
+- **Verschlüsselte Übertragung**: HTTPS für alle Requests
+- **Private Storage**: Dateien sind nur für den Benutzer zugänglich
+- **No-Index**: App wird nicht von Suchmaschinen indexiert
+
+## 📄 Export-Funktionen
+
+### PDF Export
+- Vollständiger Export aller Einträge
+- Chronologische Sortierung
+- Inklusive Metadaten und Anhang-Listen
+- Professionelles Layout für rechtliche Zwecke
+
+### JSON Export
+- Vollständige Datenstruktur
+- Inklusive aller Metadaten
+- Maschinenlesbar für weitere Verarbeitung
+
+### CSV Export
+- Tabellarische Darstellung
+- Import in Excel/Google Sheets möglich
+- Für statistische Auswertungen
 
 ## 🚀 Deployment
 
-### Vercel (empfohlen)
-1. Pushen Sie den Code zu GitHub
-2. Verbinden Sie Ihr Repository mit Vercel
-3. Fügen Sie Ihre Umgebungsvariablen in Vercel hinzu
-4. Deploy!
+### Vercel (Empfohlen)
+
+1. Repository auf GitHub/GitLab pushen
+2. Projekt mit Vercel verbinden
+3. Umgebungsvariablen in Vercel setzen
+4. Automatisches Deployment
 
 ### Andere Plattformen
-Die App kann auf jeder Node.js-fähigen Plattform deployed werden:
+
+Die App kann auf jeder Node.js-kompatiblen Plattform deployed werden:
 - Netlify
-- AWS Amplify
-- Digital Ocean App Platform
 - Railway
-
-## 🧪 Testing
-
-```bash
-# Type checking
-npm run type-check
-
-# Linting
-npm run lint
-
-# Build test
-npm run build
-```
-
-## 📄 Lizenz
-
-MIT License - siehe [LICENSE](LICENSE) Datei für Details.
+- DigitalOcean App Platform
+- AWS Amplify
 
 ## 🤝 Beitragen
 
-1. Fork das Repository
-2. Erstellen Sie einen Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Committen Sie Ihre Änderungen (`git commit -m 'Add some AmazingFeature'`)
-4. Pushen Sie den Branch (`git push origin feature/AmazingFeature`)
-5. Öffnen Sie einen Pull Request
+Da es sich um eine private Dokumentations-App handelt, sind externe Beiträge nicht vorgesehen. Der Code dient als Referenz-Implementierung.
 
-## 📞 Support
+## 📄 Lizenz
 
-Bei Fragen oder Problemen:
-- Öffnen Sie ein [GitHub Issue](issues)
-- Kontaktieren Sie den Entwickler
+Private Nutzung - Alle Rechte vorbehalten.
 
-## 🗺 Roadmap
+## 🆘 Support
 
-### Nächste Features
-- [ ] Volltext-Suche in Anhängen
-- [ ] Automatische Backup-Funktionen
-- [ ] Advanced PDF-Layouts
-- [ ] Bulk-Operations für Einträge
-- [ ] Dark Mode
-- [ ] PWA-Funktionalität
-- [ ] API für Drittanbieter-Integrationen
+Bei technischen Problemen:
+
+1. Überprüfen Sie die Supabase-Konfiguration
+2. Kontrollieren Sie die Umgebungsvariablen
+3. Schauen Sie in die Browser-Konsole für Fehlermeldungen
+4. Überprüfen Sie die Supabase Logs
+
+## ⚠️ Wichtige Hinweise
+
+- **Backup**: Regelmäßige Exports als Backup empfohlen
+- **Browser**: Moderne Browser (Chrome, Firefox, Safari, Edge) erforderlich
+- **JavaScript**: JavaScript muss aktiviert sein
+- **Storage**: Dateigröße pro Upload auf 10MB begrenzt
 
 ---
 
-**CommuniTrack** - Ihre rechtssichere Kommunikationsdokumentation 📝
+**CommuniTrack** - Ihre private Dokumentationslösung für wichtige Kommunikationsereignisse.

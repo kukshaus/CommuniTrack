@@ -5,15 +5,10 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'CommuniTrack - Kommunikation dokumentieren',
+  title: 'CommuniTrack - Private Kommunikationsdokumentation',
   description: 'Dokumentation, Organisation und Export von kommunikationsbezogenen Ereignissen',
-  keywords: ['Dokumentation', 'Kommunikation', 'Rechtssicher', 'Export'],
-  authors: [{ name: 'CommuniTrack' }],
-}
-
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
+  viewport: 'width=device-width, initial-scale=1',
+  robots: 'noindex, nofollow', // Privacy: Don't index this app
 }
 
 export default function RootLayout({
@@ -24,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="de">
       <body className={inter.className}>
-        <div id="root">{children}</div>
+        {children}
       </body>
     </html>
   )

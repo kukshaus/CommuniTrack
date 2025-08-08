@@ -1,388 +1,267 @@
-'use client'
+'use client';
 
-import { useState, useRef } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { getCategoryLabel, formatDate, formatTime, isValidImageType, sanitizeFilename } from '@/lib/utils'
-import { EntryCategory } from '@/types'
-import { X, Upload, Image as ImageIcon, Star, Calendar, Clock, Tag } from 'lucide-react'
-import { v4 as uuidv4 } from 'uuid'
-
-const entrySchema = z.object({
-  title: z.string().min(1, 'Titel ist erforderlich'),
-  description: z.string().min(1, 'Beschreibung ist erforderlich'),
-  category: z.enum(['konflikt', 'gespraech', 'verhalten', 'beweis', 'kindbetreuung', 'sonstiges']),
-  date: z.string().min(1, 'Datum ist erforderlich'),
-  time: z.string().min(1, 'Uhrzeit ist erforderlich'),
-  important: z.boolean(),
-  tags: z.string().optional()
-})
-
-type EntryFormData = z.infer<typeof entrySchema>
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useStore } from '@/store/useStore';
+import { CreateEntryData, Entry } from '@/types';
+import { formatDate } from '@/lib/utils';
+import { X, Plus, Calendar, Tag, Star } from 'lucide-react';
 
 interface EntryFormProps {
-  onClose: () => void
-  onSuccess: () => void
-  entry?: any // For editing existing entries
+  entry?: Entry;
+  onClose: () => void;
+  onSave?: (entry: Entry) => void;
 }
 
-export default function EntryForm({ onClose, onSuccess, entry }: EntryFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [attachments, setAttachments] = useState<File[]>([])
-  const [dragOver, setDragOver] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const { user } = useAuth()
+export function EntryForm({ entry, onClose, onSave }: EntryFormProps) {
+  const { categories, loading, createEntry, updateEntry, fetchCategories } = useStore();
+  
+  const [formData, setFormData] = useState<CreateEntryData>({
+    title: entry?.title || '',
+    description: entry?.description || '',
+    category_id: entry?.category_id || '',
+    event_date: entry ? entry.event_date.slice(0, 16) : new Date().toISOString().slice(0, 16),
+    is_important: entry?.is_important || false,
+    tags: entry?.tags || [],
+  });
+  
+  const [newTag, setNewTag] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors }
-  } = useForm<EntryFormData>({
-    resolver: zodResolver(entrySchema),
-    defaultValues: {
-      title: entry?.title || '',
-      description: entry?.description || '',
-      category: entry?.category || 'sonstiges',
-      date: entry?.date || new Date().toISOString().split('T')[0],
-      time: entry?.time || new Date().toTimeString().slice(0, 5),
-      important: entry?.important || false,
-      tags: entry?.tags?.join(', ') || ''
+  useEffect(() => {
+    if (categories.length === 0) {
+      fetchCategories();
     }
-  })
+  }, [categories.length, fetchCategories]);
 
-  const categories: EntryCategory[] = [
-    'konflikt', 'gespraech', 'verhalten', 'beweis', 'kindbetreuung', 'sonstiges'
-  ]
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
 
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files) return
-
-    const validFiles = Array.from(files).filter(file => 
-      isValidImageType(file.type) && file.size <= 10 * 1024 * 1024 // 10MB limit
-    )
-
-    setAttachments(prev => [...prev, ...validFiles])
-  }
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(true)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    handleFileSelect(e.dataTransfer.files)
-  }
-
-  const handlePaste = (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items
-    if (!items) return
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      if (item.type.indexOf('image') !== -1) {
-        const file = item.getAsFile()
-        if (file) {
-          setAttachments(prev => [...prev, file])
-        }
-      }
+    if (!formData.title.trim()) {
+      setError('Bitte geben Sie einen Titel ein.');
+      return;
     }
-  }
-
-  const removeAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const uploadAttachments = async (entryId: string) => {
-    const uploadPromises = attachments.map(async (file, index) => {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${entryId}_${index}.${fileExt}`
-      const filePath = `${user!.id}/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('attachments')
-        .upload(filePath, file)
-
-      if (uploadError) throw uploadError
-
-      const { error: dbError } = await supabase
-        .from('attachments')
-        .insert({
-          entry_id: entryId,
-          filename: file.name,
-          file_path: filePath,
-          file_size: file.size,
-          mime_type: file.type
-        })
-
-      if (dbError) throw dbError
-    })
-
-    await Promise.all(uploadPromises)
-  }
-
-  const onSubmit = async (data: EntryFormData) => {
-    if (!user) return
 
     try {
-      setIsSubmitting(true)
-
-      const tags = data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : []
-
-      const entryData = {
-        user_id: user.id,
-        title: data.title,
-        description: data.description,
-        category: data.category,
-        date: data.date,
-        time: data.time,
-        important: data.important,
-        tags
-      }
-
-      let entryId: string
-
+      setSubmitting(true);
+      
       if (entry) {
-        // Update existing entry
-        const { error } = await supabase
-          .from('entries')
-          .update(entryData)
-          .eq('id', entry.id)
-
-        if (error) throw error
-        entryId = entry.id
+        await updateEntry(entry.id, formData);
       } else {
-        // Create new entry
-        const { data: newEntry, error } = await supabase
-          .from('entries')
-          .insert(entryData)
-          .select()
-          .single()
-
-        if (error) throw error
-        entryId = newEntry.id
+        const newEntry = await createEntry(formData);
+        onSave?.(newEntry);
       }
-
-      // Upload attachments if any
-      if (attachments.length > 0) {
-        await uploadAttachments(entryId)
-      }
-
-      onSuccess()
-    } catch (error) {
-      console.error('Error saving entry:', error)
+      
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Fehler beim Speichern');
     } finally {
-      setIsSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        tags: [...prev.tags, newTag.trim()]
+      }));
+      setNewTag('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tags: prev.tags.filter(tag => tag !== tagToRemove)
+    }));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>
-              {entry ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}
-            </CardTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-xl">
+            {entry ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            disabled={submitting}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </CardHeader>
+        
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Title */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center">
-                <Tag className="h-4 w-4 mr-2" />
-                Titel
+              <label htmlFor="title" className="text-sm font-medium flex items-center gap-2">
+                <Tag className="h-4 w-4" />
+                Titel *
               </label>
               <Input
-                {...register('title')}
-                placeholder="Kurze Beschreibung des Ereignisses"
-                onPaste={handlePaste}
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Titel des Ereignisses"
+                disabled={submitting}
+                required
               />
-              {errors.title && (
-                <p className="text-sm text-destructive">{errors.title.message}</p>
-              )}
             </div>
 
-            {/* Date and Time */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Datum
+                <label htmlFor="eventDate" className="text-sm font-medium flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Datum & Uhrzeit *
                 </label>
                 <Input
-                  type="date"
-                  {...register('date')}
+                  id="eventDate"
+                  type="datetime-local"
+                  value={formData.event_date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, event_date: e.target.value }))}
+                  disabled={submitting}
+                  required
                 />
-                {errors.date && (
-                  <p className="text-sm text-destructive">{errors.date.message}</p>
-                )}
               </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Uhrzeit
+                <label htmlFor="category" className="text-sm font-medium">
+                  Kategorie
                 </label>
-                <Input
-                  type="time"
-                  {...register('time')}
-                />
-                {errors.time && (
-                  <p className="text-sm text-destructive">{errors.time.message}</p>
-                )}
+                <select
+                  id="category"
+                  value={formData.category_id}
+                  onChange={(e) => setFormData(prev => ({ ...prev, category_id: e.target.value }))}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={submitting}
+                >
+                  <option value="">Keine Kategorie</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            {/* Category */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Kategorie</label>
-              <select
-                {...register('category')}
-                className="w-full p-2 border rounded-md bg-white"
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>
-                    {getCategoryLabel(cat)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Beschreibung</label>
+              <label htmlFor="description" className="text-sm font-medium">
+                Beschreibung
+              </label>
               <textarea
-                {...register('description')}
-                rows={4}
-                className="w-full p-2 border rounded-md bg-white resize-none"
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Detaillierte Beschreibung des Ereignisses..."
-                onPaste={handlePaste}
+                rows={4}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                disabled={submitting}
               />
-              {errors.description && (
-                <p className="text-sm text-destructive">{errors.description.message}</p>
-              )}
             </div>
 
-            {/* Tags */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tags (optional)</label>
-              <Input
-                {...register('tags')}
-                placeholder="Tag1, Tag2, Tag3"
-              />
-              <p className="text-xs text-gray-600">
-                Trennen Sie Tags mit Kommas
-              </p>
-            </div>
-
-            {/* Important Flag */}
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="important"
-                {...register('important')}
-                className="h-4 w-4"
-              />
-              <label htmlFor="important" className="text-sm font-medium flex items-center">
-                <Star className="h-4 w-4 mr-1" />
-                Als wichtig markieren
-              </label>
-            </div>
-
-            {/* File Upload */}
-            <div className="space-y-4">
-              <label className="text-sm font-medium flex items-center">
-                <ImageIcon className="h-4 w-4 mr-2" />
-                Anhänge
-              </label>
-              
-              {/* Drop Zone */}
-              <div
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                  dragOver ? 'border-blue-500 bg-blue-500/5' : 'border-gray-300'
-                }`}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-              >
-                <Upload className="h-8 w-8 mx-auto mb-2 text-gray-600" />
-                <p className="text-sm text-gray-600 mb-2">
-                  Bilder hier ablegen oder einfügen (Strg+V)
-                </p>
+              <label className="text-sm font-medium">Tags</label>
+              <div className="flex gap-2">
+                <Input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Tag hinzufügen..."
+                  disabled={submitting}
+                />
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
+                  size="icon"
+                  onClick={handleAddTag}
+                  disabled={submitting || !newTag.trim()}
                 >
-                  Dateien auswählen
+                  <Plus className="h-4 w-4" />
                 </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFileSelect(e.target.files)}
-                />
               </div>
-
-              {/* Attachment Preview */}
-              {attachments.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Ausgewählte Dateien:</p>
-                  <div className="space-y-1">
-                    {attachments.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-2 bg-gray-100 rounded-md"
+              
+              {formData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="tag"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        disabled={submitting}
+                        className="ml-1 text-xs hover:bg-primary/20 rounded-sm"
                       >
-                        <span className="text-sm truncate">{file.name}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeAttachment(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Actions */}
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Abbrechen
+            <div className="flex items-center space-x-2">
+              <input
+                id="important"
+                type="checkbox"
+                checked={formData.is_important}
+                onChange={(e) => setFormData(prev => ({ ...prev, is_important: e.target.checked }))}
+                disabled={submitting}
+                className="rounded border-input"
+              />
+              <label htmlFor="important" className="text-sm font-medium flex items-center gap-2 cursor-pointer">
+                <Star className="h-4 w-4" />
+                Als wichtig markieren
+              </label>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="flex-1"
+              >
+                {submitting ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : null}
+                {entry ? 'Aktualisieren' : 'Erstellen'}
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Wird gespeichert...' : (entry ? 'Aktualisieren' : 'Erstellen')}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={submitting}
+              >
+                Abbrechen
               </Button>
             </div>
           </form>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

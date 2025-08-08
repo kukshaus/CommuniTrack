@@ -1,132 +1,154 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { useStore } from '@/store/useStore'
+import { useState } from 'react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useAuth } from '@/hooks/useAuth';
+import { isValidEmail } from '@/lib/utils';
 
-export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const { signIn, signUp } = useAuth()
-  const { isLoading, error } = useStore()
+export function AuthPage() {
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [formError, setFormError] = useState('');
+  
+  const { signIn, signUp, loading, error } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
+    setFormError('');
 
-    if (!isLogin && password !== confirmPassword) {
-      return // Handle password mismatch
+    // Validation
+    if (!email || !password) {
+      setFormError('Bitte füllen Sie alle Felder aus.');
+      return;
     }
 
-    if (isLogin) {
-      await signIn(email, password)
-    } else {
-      await signUp(email, password)
+    if (!isValidEmail(email)) {
+      setFormError('Bitte geben Sie eine gültige E-Mail-Adresse ein.');
+      return;
     }
-  }
+
+    if (password.length < 6) {
+      setFormError('Das Passwort muss mindestens 6 Zeichen lang sein.');
+      return;
+    }
+
+    if (isSignUp && password !== confirmPassword) {
+      setFormError('Die Passwörter stimmen nicht überein.');
+      return;
+    }
+
+    try {
+      if (isSignUp) {
+        await signUp(email, password);
+        alert('Registrierung erfolgreich! Bitte überprüfen Sie Ihre E-Mail.');
+      } else {
+        await signIn(email, password);
+      }
+    } catch (err) {
+      // Error is handled by useAuth hook
+    }
+  };
+
+  const displayError = formError || error;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-blue-600">
-            CommuniTrack
-          </CardTitle>
-          <CardDescription>
-            {isLogin 
-              ? 'Melden Sie sich in Ihrem Konto an' 
-              : 'Erstellen Sie ein neues Konto'
-            }
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">
-                E-Mail
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ihre.email@beispiel.de"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">
-                Passwort
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-            </div>
-
-            {!isLogin && (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
+        <Card className="animate-fade-in">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold">CommuniTrack</CardTitle>
+            <CardDescription>
+              {isSignUp ? 'Erstellen Sie Ihr Konto' : 'Melden Sie sich an'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {displayError && (
+                <div className="p-3 text-sm text-destructive-foreground bg-destructive/10 border border-destructive/20 rounded-md">
+                  {displayError}
+                </div>
+              )}
+              
               <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="text-sm font-medium">
-                  Passwort bestätigen
+                <label htmlFor="email" className="text-sm font-medium">
+                  E-Mail-Adresse
                 </label>
                 <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ihre@email.de"
+                  disabled={loading}
                   required
-                  minLength={6}
                 />
               </div>
-            )}
 
-            {error && (
-              <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
-                {error}
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Passwort
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  disabled={loading}
+                  required
+                />
               </div>
-            )}
 
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading}
-            >
-              {isLoading ? 'Wird verarbeitet...' : (isLogin ? 'Anmelden' : 'Registrieren')}
-            </Button>
-          </form>
+              {isSignUp && (
+                <div className="space-y-2">
+                  <label htmlFor="confirmPassword" className="text-sm font-medium">
+                    Passwort bestätigen
+                  </label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    disabled={loading}
+                    required
+                  />
+                </div>
+              )}
 
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              {isLogin 
-                ? 'Noch kein Konto? Hier registrieren' 
-                : 'Bereits ein Konto? Hier anmelden'
-              }
-            </button>
-          </div>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading}
+              >
+                {loading ? (
+                  <LoadingSpinner size="sm" className="mr-2" />
+                ) : null}
+                {isSignUp ? 'Registrieren' : 'Anmelden'}
+              </Button>
+            </form>
 
-          <div className="mt-8 text-xs text-gray-600 text-center">
-            <p>
-              CommuniTrack hilft Ihnen dabei, wichtige Kommunikation rechtssicher 
-              zu dokumentieren und zu organisieren.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-primary hover:underline"
+                disabled={loading}
+              >
+                {isSignUp
+                  ? 'Bereits ein Konto? Hier anmelden'
+                  : 'Noch kein Konto? Hier registrieren'
+                }
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  )
+  );
 }
