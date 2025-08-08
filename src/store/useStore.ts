@@ -32,23 +32,24 @@ interface AppState extends AuthState {
   hasAnyUsers: () => boolean;
 }
 
-// User storage - in a real app this would be in a database
-interface StoredUser extends User {
-  password: string;
-}
-
-// Initial empty users - will be populated from localStorage
-let USERS: StoredUser[] = [];
-let USER_COUNTER = 1;
-
-// Load users from localStorage on initialization
-if (typeof window !== 'undefined') {
-  const storedUsers = localStorage.getItem('communitrack-users');
-  if (storedUsers) {
-    USERS = JSON.parse(storedUsers);
-    USER_COUNTER = Math.max(...USERS.map(u => parseInt(u.id)), 0) + 1;
+// API helper functions
+const apiCall = async (url: string, options: RequestInit = {}) => {
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  });
+  
+  const data = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(data.error || 'API call failed');
   }
-}
+  
+  return data;
+};
 
 export const useStore = create<AppState>()(
   persist(
@@ -165,13 +166,27 @@ export const useStore = create<AppState>()(
 
   // Auth actions
   login: async (username: string, password: string) => {
-    const storedUser = USERS.find(u => u.username === username && u.password === password);
-    if (storedUser) {
-      const { password: _, ...user } = storedUser; // Remove password from user object
-      set({ user, isAuthenticated: true });
-      return true;
+    try {
+      const response = await apiCall('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+      });
+      
+      if (response.user) {
+        // Convert date strings back to Date objects
+        const user = {
+          ...response.user,
+          createdAt: new Date(response.user.createdAt),
+          updatedAt: new Date(response.user.updatedAt),
+        };
+        set({ user, isAuthenticated: true });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Login failed:', error);
+      return false;
     }
-    return false;
   },
 
   logout: () => {
@@ -183,37 +198,34 @@ export const useStore = create<AppState>()(
   },
 
   register: async (username: string, password: string, name: string) => {
-    // Check if username already exists
-    if (USERS.some(u => u.username === username)) {
+    try {
+      const response = await apiCall('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ username, password, name }),
+      });
+      
+      if (response.user) {
+        // Convert date strings back to Date objects
+        const user = {
+          ...response.user,
+          createdAt: new Date(response.user.createdAt),
+          updatedAt: new Date(response.user.updatedAt),
+        };
+        // Auto-login the new user
+        set({ user, isAuthenticated: true });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Registration failed:', error);
       return false;
     }
-
-    // Create new user - first user becomes admin
-    const isFirstUser = USERS.length === 0;
-    const newUser: StoredUser = {
-      id: USER_COUNTER.toString(),
-      username,
-      password,
-      name,
-      role: isFirstUser ? 'admin' : 'user'
-    };
-
-    USERS.push(newUser);
-    USER_COUNTER++;
-
-    // Save to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('communitrack-users', JSON.stringify(USERS));
-    }
-
-    // Auto-login the new user
-    const { password: _, ...user } = newUser;
-    set({ user, isAuthenticated: true });
-    return true;
   },
 
   hasAnyUsers: () => {
-    return USERS.length > 0;
+    // This will be checked by the component using an API call
+    // For now, return false to trigger the API check
+    return false;
   },
 }),
 {

@@ -43,7 +43,7 @@ export interface FilterOptions {
 }
 
 export interface ExportOptions {
-  format: 'pdf' | 'json' | 'csv';
+  format: 'html' | 'pdf' | 'excel';
   includeImages: boolean;
   passwordProtected: boolean;
   password?: string;
@@ -58,6 +58,8 @@ export interface User {
   username: string;
   name: string;
   role: 'admin' | 'user';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface AuthState {

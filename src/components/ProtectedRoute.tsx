@@ -11,21 +11,37 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, user, hasAnyUsers } = useStore((state) => ({
+  const { isAuthenticated, user } = useStore((state) => ({
     isAuthenticated: state.isAuthenticated,
     user: state.user,
-    hasAnyUsers: state.hasAnyUsers,
   }));
   
   const [isHydrated, setIsHydrated] = useState(false);
+  const [hasAnyUsers, setHasAnyUsers] = useState<boolean | null>(null);
 
-  // Handle hydration
+  // Handle hydration and check for users
   useEffect(() => {
     setIsHydrated(true);
+    
+    // Check if any users exist in the database
+    const checkUsers = async () => {
+      try {
+        const response = await fetch('/api/auth/check');
+        if (response.ok) {
+          const data = await response.json();
+          setHasAnyUsers(data.hasUsers);
+        }
+      } catch (error) {
+        console.error('Error checking users:', error);
+        setHasAnyUsers(false);
+      }
+    };
+    
+    checkUsers();
   }, []);
 
-  // Show loading during hydration
-  if (!isHydrated) {
+  // Show loading during hydration or while checking users
+  if (!isHydrated || hasAnyUsers === null) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <LoadingSpinner />
@@ -34,7 +50,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   // Show registration form if no users exist yet
-  if (!hasAnyUsers()) {
+  if (!hasAnyUsers) {
     return <RegisterForm />;
   }
 

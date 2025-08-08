@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Download, X, FileText, Database, Table, Lock } from 'lucide-react';
 import { ExportOptions } from '@/types';
 import { useStore } from '@/store/useStore';
-import { exportToPDF, exportToJSON, exportToCSV, downloadFile } from '@/lib/export';
+import { exportToHTML, exportToPDF, exportToExcel, downloadFile } from '@/lib/export';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import { Card, CardHeader, CardContent } from './ui/Card';
@@ -16,7 +16,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
   const { filteredEntries } = useStore();
   
   const [options, setOptions] = useState<ExportOptions>({
-    format: 'pdf',
+    format: 'html',
     includeImages: true,
     passwordProtected: false,
   });
@@ -52,19 +52,19 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
       const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
       
       switch (options.format) {
+        case 'html':
+          const htmlBlob = await exportToHTML(entriesToExport, exportOptions);
+          downloadFile(htmlBlob, `CommuniTrack_Export_${timestamp}.html`, 'text/html');
+          break;
+          
         case 'pdf':
           const pdfBlob = await exportToPDF(entriesToExport, exportOptions);
-          downloadFile(pdfBlob, `CommuniTrack_Export_${timestamp}.html`, 'text/html');
+          downloadFile(pdfBlob, `CommuniTrack_Export_${timestamp}.pdf`, 'application/pdf');
           break;
           
-        case 'json':
-          const jsonContent = exportToJSON(entriesToExport, exportOptions);
-          downloadFile(jsonContent, `CommuniTrack_Export_${timestamp}.json`, 'application/json');
-          break;
-          
-        case 'csv':
-          const csvContent = exportToCSV(entriesToExport, exportOptions);
-          downloadFile(csvContent, `CommuniTrack_Export_${timestamp}.csv`, 'text/csv');
+        case 'excel':
+          const excelBlob = await exportToExcel(entriesToExport, exportOptions);
+          downloadFile(excelBlob, `CommuniTrack_Export_${timestamp}.csv`, 'text/csv');
           break;
       }
       
@@ -114,13 +114,13 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
               <label className="flex items-center">
                 <input
                   type="radio"
-                  value="pdf"
-                  checked={options.format === 'pdf'}
+                  value="html"
+                  checked={options.format === 'html'}
                   onChange={(e) => setOptions(prev => ({ ...prev, format: e.target.value as any }))}
                   className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                 />
                 <div className="ml-3 flex items-center">
-                  <FileText className="h-4 w-4 text-red-500 mr-2" />
+                  <FileText className="h-4 w-4 text-orange-500 mr-2" />
                   <span className="text-sm text-gray-700">
                     HTML (druckbar, empfohlen für rechtliche Zwecke)
                   </span>
@@ -130,15 +130,15 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
               <label className="flex items-center">
                 <input
                   type="radio"
-                  value="json"
-                  checked={options.format === 'json'}
+                  value="pdf"
+                  checked={options.format === 'pdf'}
                   onChange={(e) => setOptions(prev => ({ ...prev, format: e.target.value as any }))}
                   className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                 />
                 <div className="ml-3 flex items-center">
-                  <Database className="h-4 w-4 text-blue-500 mr-2" />
+                  <FileText className="h-4 w-4 text-red-500 mr-2" />
                   <span className="text-sm text-gray-700">
-                    JSON (vollständige Daten)
+                    PDF (druckbar, empfohlen für rechtliche Zwecke)
                   </span>
                 </div>
               </label>
@@ -146,15 +146,15 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
               <label className="flex items-center">
                 <input
                   type="radio"
-                  value="csv"
-                  checked={options.format === 'csv'}
+                  value="excel"
+                  checked={options.format === 'excel'}
                   onChange={(e) => setOptions(prev => ({ ...prev, format: e.target.value as any }))}
                   className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
                 />
                 <div className="ml-3 flex items-center">
                   <Table className="h-4 w-4 text-green-500 mr-2" />
                   <span className="text-sm text-gray-700">
-                    CSV (für Excel/Tabellen)
+                    Excel (für Tabellenkalkulation)
                   </span>
                 </div>
               </label>

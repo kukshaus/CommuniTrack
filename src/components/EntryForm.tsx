@@ -1,11 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { X, Save, Tag, Calendar, FileText } from 'lucide-react';
-import { Entry, EntryCategory } from '@/types';
+import { Entry, EntryCategory, Attachment } from '@/types';
 import { useStore } from '@/store/useStore';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import { Card, CardHeader, CardContent } from './ui/Card';
 import FileUpload from './FileUpload';
+import DraggableAttachmentList from './DraggableAttachmentList';
+import DraggableFileList from './DraggableFileList';
 import { formatDate } from '@/lib/utils';
 
 interface EntryFormProps {
@@ -35,6 +37,7 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
   });
   
   const [files, setFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(entry?.attachments || []);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSaving, setIsSaving] = useState(false);
 
@@ -105,7 +108,7 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
           .map(tag => tag.trim())
           .filter(tag => tag.length > 0),
         isImportant: formData.isImportant,
-        attachments: [...(entry?.attachments || []), ...attachments],
+        attachments: [...existingAttachments, ...attachments],
         createdAt: entry?.createdAt || new Date(),
         updatedAt: new Date(),
         userId: user.id, // Assign entry to current user
@@ -152,6 +155,18 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
 
   const handleFileRemove = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleExistingAttachmentRemove = useCallback((index: number) => {
+    setExistingAttachments(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const handleExistingAttachmentsReorder = useCallback((reorderedAttachments: Attachment[]) => {
+    setExistingAttachments(reorderedAttachments);
+  }, []);
+
+  const handleFilesReorder = useCallback((reorderedFiles: File[]) => {
+    setFiles(reorderedFiles);
   }, []);
 
   return (
@@ -251,14 +266,39 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
 
             {/* File Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
                 Anhänge
               </label>
-              <FileUpload
-                files={files}
-                onFilesAdd={handleFilesAdd}
-                onFileRemove={handleFileRemove}
+              
+              {/* Existing Attachments with Drag & Drop */}
+              <DraggableAttachmentList
+                attachments={existingAttachments}
+                onReorder={handleExistingAttachmentsReorder}
+                onRemove={handleExistingAttachmentRemove}
+                title="Vorhandene Anhänge"
               />
+              
+              {/* New Files with Drag & Drop */}
+              <DraggableFileList
+                files={files}
+                onReorder={handleFilesReorder}
+                onRemove={handleFileRemove}
+                title="Neue Dateien"
+              />
+              
+              {/* File Upload Area */}
+              <FileUpload
+                files={[]} // Don't show files here anymore, they're shown above
+                onFilesAdd={handleFilesAdd}
+                onFileRemove={() => {}} // Not used since files are shown above
+              />
+              
+              {/* Helper Text */}
+              {(existingAttachments.length > 0 || files.length > 0) && (
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Tipp: Ziehen Sie die Anhänge mit dem ⋮⋮ Symbol, um die Reihenfolge zu ändern
+                </p>
+              )}
             </div>
 
             {/* Submit Buttons */}
@@ -277,5 +317,7 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
     </div>
   );
 };
+
+
 
 export default EntryForm;
