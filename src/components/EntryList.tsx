@@ -1,280 +1,245 @@
-'use client';
-
-import { useState } from 'react';
-import { Entry } from '@/types';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { EntryForm } from '@/components/EntryForm';
-import { useStore } from '@/store/useStore';
-import { formatDate, getFileTypeIcon } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import React from 'react';
 import { 
   Calendar, 
-  Tag, 
+  Image as ImageIcon, 
   Star, 
   Edit, 
   Trash2, 
-  Paperclip,
-  Download,
-  Eye
+  Tag,
+  MoreVertical 
 } from 'lucide-react';
+import { Entry } from '@/types';
+import { useStore } from '@/store/useStore';
+import { formatDate } from '@/lib/utils';
+import Button from './ui/Button';
+import { Card, CardContent } from './ui/Card';
 
 interface EntryListProps {
-  entries: Entry[];
+  onEditEntry: (entry: Entry) => void;
 }
 
-export function EntryList({ entries }: EntryListProps) {
-  const { deleteEntry, deleteAttachment } = useStore();
-  const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [expandedEntries, setExpandedEntries] = useState<Set<string>>(new Set());
+const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
+  const { filteredEntries, deleteEntry, setLoading } = useStore();
 
-  const toggleExpanded = (entryId: string) => {
-    const newExpanded = new Set(expandedEntries);
-    if (newExpanded.has(entryId)) {
-      newExpanded.delete(entryId);
-    } else {
-      newExpanded.add(entryId);
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!confirm('Sind Sie sicher, dass Sie diesen Eintrag löschen möchten?')) {
+      return;
     }
-    setExpandedEntries(newExpanded);
-  };
 
-  const handleDelete = async (entry: Entry) => {
-    if (!confirm('Möchten Sie diesen Eintrag wirklich löschen?')) return;
-    
+    setLoading(true);
     try {
-      setDeletingId(entry.id);
-      await deleteEntry(entry.id);
+      const response = await fetch(`/api/entries/${entryId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        deleteEntry(entryId);
+      }
     } catch (error) {
       console.error('Error deleting entry:', error);
     } finally {
-      setDeletingId(null);
+      setLoading(false);
     }
   };
 
-  const handleDeleteAttachment = async (attachment: any, entry: Entry) => {
-    if (!confirm('Möchten Sie diese Datei wirklich löschen?')) return;
-    
-    try {
-      await deleteAttachment(attachment.id, attachment.file_path);
-    } catch (error) {
-      console.error('Error deleting attachment:', error);
-    }
+  const getCategoryColor = (category: string) => {
+    const colors = {
+      konflikt: 'bg-red-100 text-red-800',
+      gespraech: 'bg-blue-100 text-blue-800',
+      verhalten: 'bg-yellow-100 text-yellow-800',
+      beweis: 'bg-purple-100 text-purple-800',
+      kindbetreuung: 'bg-green-100 text-green-800',
+      sonstiges: 'bg-gray-100 text-gray-800',
+    };
+    return colors[category as keyof typeof colors] || colors.sonstiges;
   };
 
-  const downloadAttachment = async (attachment: any) => {
-    try {
-      const { data, error } = await supabase.storage
-        .from('attachments')
-        .download(attachment.file_path);
-
-      if (error) throw error;
-
-      const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = attachment.file_name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error downloading attachment:', error);
-    }
+  const getCategoryLabel = (category: string) => {
+    const labels = {
+      konflikt: 'Konflikt',
+      gespraech: 'Gespräch',
+      verhalten: 'Verhalten',
+      beweis: 'Beweis',
+      kindbetreuung: 'Kindbetreuung',
+      sonstiges: 'Sonstiges',
+    };
+    return labels[category as keyof typeof labels] || category;
   };
 
-  const getAttachmentUrl = (filePath: string) => {
-    const { data } = supabase.storage
-      .from('attachments')
-      .getPublicUrl(filePath);
-    return data.publicUrl;
-  };
-
-  if (entries.length === 0) {
+  if (filteredEntries.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="text-muted-foreground">
-          <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="text-lg font-medium">Noch keine Einträge</p>
-          <p>Erstellen Sie Ihren ersten Eintrag, um zu beginnen.</p>
-        </div>
+        <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Keine Einträge gefunden
+        </h3>
+        <p className="text-gray-500">
+          Erstellen Sie Ihren ersten Eintrag oder passen Sie Ihre Filter an.
+        </p>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="space-y-4">
-        {entries.map((entry) => {
-          const isExpanded = expandedEntries.has(entry.id);
-          const hasLongDescription = entry.description && entry.description.length > 200;
-          const displayDescription = hasLongDescription && !isExpanded 
-            ? entry.description.slice(0, 200) + '...'
-            : entry.description;
-
-          return (
-            <Card key={entry.id} className="animate-fade-in">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-lg">{entry.title}</h3>
-                      {entry.is_important && (
-                        <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                      )}
+    <div className="space-y-4">
+      {/* Timeline */}
+      <div className="relative">
+        {/* Timeline line */}
+        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200" />
+        
+        {filteredEntries.map((entry, index) => (
+          <div key={entry._id} className="relative">
+            {/* Timeline dot */}
+            <div className={`absolute left-6 w-4 h-4 rounded-full border-2 bg-white ${
+              entry.isImportant ? 'border-red-500' : 'border-gray-300'
+            }`} />
+            
+            {/* Entry Card */}
+            <div className="ml-16 mb-8">
+              <Card hover className="transition-all duration-200 hover:shadow-lg">
+                <CardContent className="p-6">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {entry.title}
+                        </h3>
+                        {entry.isImportant && (
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {formatDate(new Date(entry.date))}
+                        </span>
+                        
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(entry.category)}`}>
+                          {getCategoryLabel(entry.category)}
+                        </span>
+                        
+                        {entry.attachments.length > 0 && (
+                          <span className="flex items-center gap-1">
+                            <ImageIcon className="h-4 w-4" />
+                            {entry.attachments.length}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        {formatDate(entry.event_date)}
-                      </span>
-                      
-                      {entry.category && (
-                        <span 
-                          className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-                          style={{ 
-                            backgroundColor: `${entry.category.color}20`,
-                            color: entry.category.color 
-                          }}
-                        >
-                          <Tag className="h-3 w-3" />
-                          {entry.category.name}
-                        </span>
-                      )}
-
-                      {entry.attachments && entry.attachments.length > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Paperclip className="h-4 w-4" />
-                          {entry.attachments.length}
-                        </span>
-                      )}
+                    {/* Actions */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEditEntry(entry)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => entry._id && handleDeleteEntry(entry._id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditingEntry(entry)}
-                      disabled={deletingId === entry.id}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(entry)}
-                      disabled={deletingId === entry.id}
-                    >
-                      {deletingId === entry.id ? (
-                        <LoadingSpinner size="sm" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="pt-0">
-                {entry.description && (
+                  {/* Description */}
                   <div className="mb-4">
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                      {displayDescription}
+                    <p className="text-gray-700 whitespace-pre-wrap">
+                      {entry.description}
                     </p>
-                    {hasLongDescription && (
-                      <button
-                        onClick={() => toggleExpanded(entry.id)}
-                        className="text-primary text-sm hover:underline mt-1"
-                      >
-                        {isExpanded ? 'Weniger anzeigen' : 'Mehr anzeigen'}
-                      </button>
-                    )}
                   </div>
-                )}
 
-                {entry.tags && entry.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {entry.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 bg-muted text-muted-foreground rounded text-xs"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  {/* Attachments */}
+                  {entry.attachments.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">
+                        Anhänge ({entry.attachments.length})
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {entry.attachments.map((attachment, attachIndex) => (
+                          <AttachmentPreview
+                            key={attachIndex}
+                            attachment={attachment}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                {entry.attachments && entry.attachments.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Anhänge</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {entry.attachments.map((attachment) => (
-                        <div
-                          key={attachment.id}
-                          className="flex items-center gap-2 p-2 border rounded-md bg-muted/30"
+                  {/* Tags */}
+                  {entry.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {entry.tags.map((tag, tagIndex) => (
+                        <span
+                          key={tagIndex}
+                          className="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 text-gray-700 text-xs"
                         >
-                          <span className="text-lg">
-                            {getFileTypeIcon(attachment.file_type || '')}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {attachment.file_name}
-                            </p>
-                            {attachment.context && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {attachment.context}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {attachment.file_type?.startsWith('image/') && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => window.open(getAttachmentUrl(attachment.file_path), '_blank')}
-                                className="h-6 w-6"
-                              >
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => downloadAttachment(attachment)}
-                              className="h-6 w-6"
-                            >
-                              <Download className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteAttachment(attachment, entry)}
-                              className="h-6 w-6"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
+                          <Tag className="h-3 w-3 mr-1" />
+                          {tag}
+                        </span>
                       ))}
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ))}
       </div>
-
-      {editingEntry && (
-        <EntryForm
-          entry={editingEntry}
-          onClose={() => setEditingEntry(null)}
-        />
-      )}
-    </>
+    </div>
   );
+};
+
+interface AttachmentPreviewProps {
+  attachment: any;
 }
+
+const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment }) => {
+  const handleClick = () => {
+    if (attachment.url.startsWith('data:image/')) {
+      // Open image in new tab
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(`
+          <img src="${attachment.url}" style="max-width: 100%; height: auto;" />
+        `);
+      }
+    }
+  };
+
+  if (attachment.fileType.startsWith('image/')) {
+    return (
+      <div
+        className="relative group cursor-pointer overflow-hidden rounded-lg bg-gray-100"
+        onClick={handleClick}
+      >
+        <img
+          src={attachment.url}
+          alt={attachment.fileName}
+          className="w-full h-20 object-cover transition-transform group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200" />
+        {attachment.isImportant && (
+          <Star className="absolute top-1 right-1 h-3 w-3 text-yellow-500 fill-current" />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center p-2 bg-gray-50 rounded-lg">
+      <ImageIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+      <span className="text-xs text-gray-600 truncate">
+        {attachment.fileName}
+      </span>
+    </div>
+  );
+};
+
+export default EntryList;

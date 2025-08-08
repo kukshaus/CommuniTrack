@@ -1,277 +1,268 @@
-'use client';
-
-import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import React, { useState } from 'react';
+import { Download, X, FileText, Database, Table, Lock } from 'lucide-react';
+import { ExportOptions } from '@/types';
 import { useStore } from '@/store/useStore';
-import { ExportOptions, Entry } from '@/types';
-import { ExportService } from '@/lib/export';
-import { formatDate } from '@/lib/utils';
-import { 
-  X, 
-  Download, 
-  FileText, 
-  Database, 
-  Table,
-  Calendar,
-  Filter,
-  Lock
-} from 'lucide-react';
+import { exportToPDF, exportToJSON, exportToCSV, downloadFile } from '@/lib/export';
+import Button from './ui/Button';
+import Input from './ui/Input';
+import { Card, CardHeader, CardContent } from './ui/Card';
+import LoadingSpinner from './LoadingSpinner';
 
 interface ExportDialogProps {
   onClose: () => void;
 }
 
-export function ExportDialog({ onClose }: ExportDialogProps) {
-  const { entries, categories } = useStore();
-  const [exporting, setExporting] = useState(false);
-  const [exportOptions, setExportOptions] = useState<ExportOptions>({
+const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
+  const { filteredEntries } = useStore();
+  
+  const [options, setOptions] = useState<ExportOptions>({
     format: 'pdf',
-    includeAttachments: true,
-    dateRange: undefined,
-    categories: undefined,
-    password: undefined,
+    includeImages: true,
+    passwordProtected: false,
+  });
+  
+  const [isExporting, setIsExporting] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    start: '',
+    end: '',
   });
 
   const handleExport = async () => {
+    setIsExporting(true);
+    
     try {
-      setExporting(true);
+      const exportOptions: ExportOptions = {
+        ...options,
+        dateRange: dateRange.start && dateRange.end ? {
+          start: new Date(dateRange.start),
+          end: new Date(dateRange.end),
+        } : undefined,
+      };
+
+      // Filter entries by date range if specified
+      let entriesToExport = filteredEntries;
+      if (exportOptions.dateRange) {
+        entriesToExport = filteredEntries.filter(entry => {
+          const entryDate = new Date(entry.date);
+          return entryDate >= exportOptions.dateRange!.start && 
+                 entryDate <= exportOptions.dateRange!.end;
+        });
+      }
+
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
       
-      // Filter entries based on options
-      let filteredEntries = ExportService.filterEntriesByOptions(entries, exportOptions);
-      
-      switch (exportOptions.format) {
+      switch (options.format) {
         case 'pdf':
-          await ExportService.exportToPDF(filteredEntries, exportOptions);
+          const pdfBlob = await exportToPDF(entriesToExport, exportOptions);
+          downloadFile(pdfBlob, `CommuniTrack_Export_${timestamp}.html`, 'text/html');
           break;
+          
         case 'json':
-          await ExportService.exportToJSON(filteredEntries, exportOptions);
+          const jsonContent = exportToJSON(entriesToExport, exportOptions);
+          downloadFile(jsonContent, `CommuniTrack_Export_${timestamp}.json`, 'application/json');
           break;
+          
         case 'csv':
-          await ExportService.exportToCSV(filteredEntries, exportOptions);
+          const csvContent = exportToCSV(entriesToExport, exportOptions);
+          downloadFile(csvContent, `CommuniTrack_Export_${timestamp}.csv`, 'text/csv');
           break;
       }
       
       onClose();
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('Export fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      console.error('Export error:', error);
+      alert('Fehler beim Exportieren. Bitte versuchen Sie es erneut.');
     } finally {
-      setExporting(false);
+      setIsExporting(false);
     }
   };
 
-  const updateOptions = (updates: Partial<ExportOptions>) => {
-    setExportOptions(prev => ({ ...prev, ...updates }));
+  const getEntryCount = () => {
+    if (!dateRange.start || !dateRange.end) {
+      return filteredEntries.length;
+    }
+    
+    return filteredEntries.filter(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate >= new Date(dateRange.start) && 
+             entryDate <= new Date(dateRange.end);
+    }).length;
   };
 
-  const filteredCount = ExportService.filterEntriesByOptions(entries, exportOptions).length;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Download className="h-5 w-5" />
-            Daten exportieren
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            disabled={exporting}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+              <Download className="h-5 w-5 mr-2" />
+              Export
+            </h2>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </CardHeader>
         
         <CardContent className="space-y-6">
           {/* Format Selection */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Export-Format</label>
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                variant={exportOptions.format === 'pdf' ? 'default' : 'outline'}
-                onClick={() => updateOptions({ format: 'pdf' })}
-                className="flex flex-col items-center gap-2 h-auto py-3"
-                disabled={exporting}
-              >
-                <FileText className="h-5 w-5" />
-                <span className="text-xs">PDF</span>
-              </Button>
-              <Button
-                variant={exportOptions.format === 'json' ? 'default' : 'outline'}
-                onClick={() => updateOptions({ format: 'json' })}
-                className="flex flex-col items-center gap-2 h-auto py-3"
-                disabled={exporting}
-              >
-                <Database className="h-5 w-5" />
-                <span className="text-xs">JSON</span>
-              </Button>
-              <Button
-                variant={exportOptions.format === 'csv' ? 'default' : 'outline'}
-                onClick={() => updateOptions({ format: 'csv' })}
-                className="flex flex-col items-center gap-2 h-auto py-3"
-                disabled={exporting}
-              >
-                <Table className="h-5 w-5" />
-                <span className="text-xs">CSV</span>
-              </Button>
-            </div>
-          </div>
-
-          {/* Date Range Filter */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Zeitraum (optional)
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs text-muted-foreground">Von</label>
-                <Input
-                  type="date"
-                  value={exportOptions.dateRange?.start || ''}
-                  onChange={(e) => updateOptions({
-                    dateRange: e.target.value ? {
-                      start: e.target.value,
-                      end: exportOptions.dateRange?.end || ''
-                    } : undefined
-                  })}
-                  disabled={exporting}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Bis</label>
-                <Input
-                  type="date"
-                  value={exportOptions.dateRange?.end || ''}
-                  onChange={(e) => updateOptions({
-                    dateRange: exportOptions.dateRange?.start ? {
-                      start: exportOptions.dateRange.start,
-                      end: e.target.value
-                    } : undefined
-                  })}
-                  disabled={exporting}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Category Filter */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              Kategorien (optional)
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Exportformat
             </label>
             <div className="space-y-2">
-              {categories.map((category) => (
-                <label key={category.id} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={exportOptions.categories?.includes(category.id) || false}
-                    onChange={(e) => {
-                      const currentCategories = exportOptions.categories || [];
-                      if (e.target.checked) {
-                        updateOptions({
-                          categories: [...currentCategories, category.id]
-                        });
-                      } else {
-                        updateOptions({
-                          categories: currentCategories.filter(id => id !== category.id)
-                        });
-                      }
-                    }}
-                    disabled={exporting}
-                    className="rounded border-input"
-                  />
-                  <span 
-                    className="text-sm flex items-center gap-2"
-                    style={{ color: category.color }}
-                  >
-                    <span 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    {category.name}
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="pdf"
+                  checked={options.format === 'pdf'}
+                  onChange={(e) => setOptions(prev => ({ ...prev, format: e.target.value as any }))}
+                  className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                />
+                <div className="ml-3 flex items-center">
+                  <FileText className="h-4 w-4 text-red-500 mr-2" />
+                  <span className="text-sm text-gray-700">
+                    HTML (druckbar, empfohlen für rechtliche Zwecke)
                   </span>
-                </label>
-              ))}
+                </div>
+              </label>
+              
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="json"
+                  checked={options.format === 'json'}
+                  onChange={(e) => setOptions(prev => ({ ...prev, format: e.target.value as any }))}
+                  className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                />
+                <div className="ml-3 flex items-center">
+                  <Database className="h-4 w-4 text-blue-500 mr-2" />
+                  <span className="text-sm text-gray-700">
+                    JSON (vollständige Daten)
+                  </span>
+                </div>
+              </label>
+              
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="csv"
+                  checked={options.format === 'csv'}
+                  onChange={(e) => setOptions(prev => ({ ...prev, format: e.target.value as any }))}
+                  className="h-4 w-4 text-primary-600 border-gray-300 focus:ring-primary-500"
+                />
+                <div className="ml-3 flex items-center">
+                  <Table className="h-4 w-4 text-green-500 mr-2" />
+                  <span className="text-sm text-gray-700">
+                    CSV (für Excel/Tabellen)
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Date Range */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Zeitraum (optional)
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                placeholder="Von"
+              />
+              <Input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                placeholder="Bis"
+              />
             </div>
           </div>
 
           {/* Options */}
           <div className="space-y-3">
-            <label className="text-sm font-medium">Optionen</label>
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={exportOptions.includeAttachments}
-                  onChange={(e) => updateOptions({ includeAttachments: e.target.checked })}
-                  disabled={exporting}
-                  className="rounded border-input"
-                />
-                <span className="text-sm">Anhänge in Export einbeziehen</span>
-              </label>
-            </div>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={options.includeImages}
+                onChange={(e) => setOptions(prev => ({ ...prev, includeImages: e.target.checked }))}
+                className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                Bilder und Anhänge einschließen
+              </span>
+            </label>
+            
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={options.passwordProtected}
+                onChange={(e) => setOptions(prev => ({ ...prev, passwordProtected: e.target.checked }))}
+                className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                Passwortschutz (bald verfügbar)
+              </span>
+            </label>
           </div>
 
-          {/* Password Protection (Future Feature) */}
-          <div className="space-y-3 opacity-50">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Lock className="h-4 w-4" />
-              Passwortschutz (Coming Soon)
-            </label>
+          {/* Password Field */}
+          {options.passwordProtected && (
             <Input
               type="password"
-              placeholder="Passwort für Export (optional)"
-              disabled={true}
+              label="Passwort"
+              value={options.password || ''}
+              onChange={(e) => setOptions(prev => ({ ...prev, password: e.target.value }))}
+              placeholder="Passwort für den Export"
+              icon={<Lock className="h-4 w-4" />}
             />
-          </div>
+          )}
 
-          {/* Export Summary */}
-          <div className="p-3 bg-muted rounded-md">
-            <div className="text-sm space-y-1">
-              <p><strong>Export-Vorschau:</strong></p>
-              <p>Format: {exportOptions.format.toUpperCase()}</p>
-              <p>Einträge: {filteredCount} von {entries.length}</p>
-              <p>Anhänge: {exportOptions.includeAttachments ? 'Ja' : 'Nein'}</p>
-              {exportOptions.dateRange && (
-                <p>Zeitraum: {formatDate(exportOptions.dateRange.start)} - {formatDate(exportOptions.dateRange.end)}</p>
-              )}
-              {exportOptions.categories && exportOptions.categories.length > 0 && (
-                <p>Kategorien: {exportOptions.categories.length} ausgewählt</p>
+          {/* Summary */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">
+              Export-Zusammenfassung
+            </h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>Format: {options.format.toUpperCase()}</p>
+              <p>Einträge: {getEntryCount()}</p>
+              <p>Bilder: {options.includeImages ? 'Enthalten' : 'Nicht enthalten'}</p>
+              {dateRange.start && dateRange.end && (
+                <p>Zeitraum: {dateRange.start} bis {dateRange.end}</p>
               )}
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button
-              onClick={handleExport}
-              disabled={exporting || filteredCount === 0}
-              className="flex-1"
-            >
-              {exporting ? (
-                <LoadingSpinner size="sm" className="mr-2" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              {exporting ? 'Exportiere...' : 'Export starten'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={onClose}
-              disabled={exporting}
-            >
+          {/* Actions */}
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button variant="outline" onClick={onClose} disabled={isExporting}>
               Abbrechen
+            </Button>
+            <Button 
+              onClick={handleExport} 
+              disabled={isExporting || getEntryCount() === 0}
+              className="flex items-center"
+            >
+              {isExporting ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-2" />
+                  Exportiere...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export starten
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
       </Card>
     </div>
   );
-}
+};
+
+export default ExportDialog;

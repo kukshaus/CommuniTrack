@@ -1,230 +1,162 @@
-import jsPDF from 'jspdf';
-import { saveAs } from 'file-saver';
 import { Entry, ExportOptions } from '@/types';
-import { formatDate } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
+import { formatDate } from './utils';
 
-export class ExportService {
-  
-  static async exportToPDF(entries: Entry[], options: ExportOptions): Promise<void> {
-    const pdf = new jsPDF();
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin = 20;
-    const contentWidth = pageWidth - 2 * margin;
-    let yPosition = margin;
-
-    // Title
-    pdf.setFontSize(20);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('CommuniTrack Export', margin, yPosition);
-    yPosition += 15;
-
-    // Export info
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Exportiert am: ${formatDate(new Date())}`, margin, yPosition);
-    yPosition += 5;
-    pdf.text(`Anzahl Einträge: ${entries.length}`, margin, yPosition);
-    yPosition += 15;
-
-    // Process each entry
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      
-      // Check if we need a new page
-      if (yPosition > pageHeight - 60) {
-        pdf.addPage();
-        yPosition = margin;
-      }
-
-      // Entry header
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      
-      const title = entry.is_important ? `⭐ ${entry.title}` : entry.title;
-      const titleLines = pdf.splitTextToSize(title, contentWidth);
-      pdf.text(titleLines, margin, yPosition);
-      yPosition += titleLines.length * 7;
-
-      // Entry metadata
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(100, 100, 100);
-      
-      const metadata = [
-        `Datum: ${formatDate(entry.event_date)}`,
-        entry.category ? `Kategorie: ${entry.category.name}` : '',
-        entry.tags.length > 0 ? `Tags: ${entry.tags.join(', ')}` : '',
-        entry.attachments && entry.attachments.length > 0 ? `Anhänge: ${entry.attachments.length}` : ''
-      ].filter(Boolean).join(' | ');
-      
-      const metadataLines = pdf.splitTextToSize(metadata, contentWidth);
-      pdf.text(metadataLines, margin, yPosition);
-      yPosition += metadataLines.length * 5 + 5;
-
-      // Entry description
-      if (entry.description) {
-        pdf.setTextColor(0, 0, 0);
-        pdf.setFontSize(10);
-        const descriptionLines = pdf.splitTextToSize(entry.description, contentWidth);
-        pdf.text(descriptionLines, margin, yPosition);
-        yPosition += descriptionLines.length * 5 + 5;
-      }
-
-      // Attachments list
-      if (entry.attachments && entry.attachments.length > 0 && options.includeAttachments) {
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Anhänge:', margin, yPosition);
-        yPosition += 6;
-        
-        pdf.setFont('helvetica', 'normal');
-        entry.attachments.forEach(attachment => {
-          const attachmentText = `• ${attachment.file_name}`;
-          const attachmentLine = pdf.splitTextToSize(attachmentText, contentWidth - 10);
-          pdf.text(attachmentLine, margin + 5, yPosition);
-          yPosition += attachmentLine.length * 4;
-          
-          if (attachment.context) {
-            pdf.setTextColor(100, 100, 100);
-            const contextLines = pdf.splitTextToSize(`  ${attachment.context}`, contentWidth - 10);
-            pdf.text(contextLines, margin + 5, yPosition);
-            yPosition += contextLines.length * 4;
-            pdf.setTextColor(0, 0, 0);
-          }
-        });
-        yPosition += 5;
-      }
-
-      // Add separator line
-      if (i < entries.length - 1) {
-        pdf.setDrawColor(200, 200, 200);
-        pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-        yPosition += 10;
-      }
-    }
-
-    // Footer on each page
-    const pageCount = pdf.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      pdf.setPage(i);
-      pdf.setFontSize(8);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text(`Seite ${i} von ${pageCount}`, pageWidth - margin - 30, pageHeight - 10);
-      pdf.text('CommuniTrack Export', margin, pageHeight - 10);
-    }
-
-    // Save the PDF
-    const fileName = `CommuniTrack_Export_${formatDate(new Date(), 'yyyy-MM-dd_HH-mm')}.pdf`;
-    pdf.save(fileName);
-  }
-
-  static async exportToJSON(entries: Entry[], options: ExportOptions): Promise<void> {
-    const exportData = {
-      meta: {
-        exportedAt: new Date().toISOString(),
-        version: '1.0',
-        totalEntries: entries.length,
-        includeAttachments: options.includeAttachments,
-        filters: options.categories || null,
-        dateRange: options.dateRange || null,
-      },
-      entries: entries.map(entry => ({
-        id: entry.id,
-        title: entry.title,
-        description: entry.description,
-        category: entry.category ? {
-          id: entry.category.id,
-          name: entry.category.name,
-          color: entry.category.color,
-        } : null,
-        eventDate: entry.event_date,
-        isImportant: entry.is_important,
-        tags: entry.tags,
-        createdAt: entry.created_at,
-        updatedAt: entry.updated_at,
-        attachments: options.includeAttachments && entry.attachments ? 
-          entry.attachments.map(att => ({
-            id: att.id,
-            fileName: att.file_name,
-            filePath: att.file_path,
-            fileSize: att.file_size,
-            fileType: att.file_type,
-            isImportant: att.is_important,
-            context: att.context,
-            createdAt: att.created_at,
-          })) : [],
-      })),
-    };
-
-    const jsonString = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const fileName = `CommuniTrack_Export_${formatDate(new Date(), 'yyyy-MM-dd_HH-mm')}.json`;
-    saveAs(blob, fileName);
-  }
-
-  static async exportToCSV(entries: Entry[], options: ExportOptions): Promise<void> {
-    const headers = [
-      'Titel',
-      'Beschreibung',
-      'Kategorie',
-      'Datum',
-      'Wichtig',
-      'Tags',
-      'Anhänge_Anzahl',
-      'Erstellt_am',
-      'Aktualisiert_am'
-    ];
-
-    const rows = entries.map(entry => [
-      entry.title,
-      entry.description || '',
-      entry.category?.name || '',
-      formatDate(entry.event_date),
-      entry.is_important ? 'Ja' : 'Nein',
-      entry.tags.join('; '),
-      entry.attachments?.length || 0,
-      formatDate(entry.created_at),
-      formatDate(entry.updated_at),
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const fileName = `CommuniTrack_Export_${formatDate(new Date(), 'yyyy-MM-dd_HH-mm')}.csv`;
-    saveAs(blob, fileName);
-  }
-
-  static async downloadAttachments(entries: Entry[]): Promise<void> {
-    // This would create a ZIP file with all attachments
-    // For now, we'll just show a message about individual downloads
-    alert('Anhänge können einzeln über die Einträge heruntergeladen werden.');
-  }
-
-  static filterEntriesByOptions(entries: Entry[], options: ExportOptions): Entry[] {
-    let filteredEntries = [...entries];
-
-    // Date range filter
-    if (options.dateRange) {
-      const startDate = new Date(options.dateRange.start);
-      const endDate = new Date(options.dateRange.end);
-      filteredEntries = filteredEntries.filter(entry => {
-        const entryDate = new Date(entry.event_date);
-        return entryDate >= startDate && entryDate <= endDate;
-      });
-    }
-
-    // Category filter
-    if (options.categories && options.categories.length > 0) {
-      filteredEntries = filteredEntries.filter(entry => 
-        entry.category_id && options.categories!.includes(entry.category_id)
-      );
-    }
-
-    return filteredEntries;
-  }
+// Helper function for file size formatting
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
+
+// Simple PDF generation using jsPDF alternative - for now we'll create a simple HTML to PDF
+export const exportToPDF = async (entries: Entry[], options: ExportOptions): Promise<Blob> => {
+  const getCategoryLabel = (category: string) => {
+    const labels = {
+      konflikt: 'Konflikt',
+      gespraech: 'Gespräch', 
+      verhalten: 'Verhalten',
+      beweis: 'Beweis',
+      kindbetreuung: 'Kindbetreuung',
+      sonstiges: 'Sonstiges',
+    };
+    return labels[category as keyof typeof labels] || category;
+  };
+
+  // Create HTML content for PDF
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>CommuniTrack Export</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        .header { border-bottom: 3px solid #0ea5e9; padding-bottom: 20px; margin-bottom: 30px; }
+        .title { font-size: 28px; font-weight: bold; color: #1f2937; margin-bottom: 10px; }
+        .subtitle { font-size: 14px; color: #6b7280; margin-bottom: 5px; }
+        .entry { border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 25px; page-break-inside: avoid; }
+        .entry.important { background-color: #fef3c7; border-color: #f59e0b; }
+        .entry-header { border-bottom: 1px solid #f3f4f6; padding-bottom: 12px; margin-bottom: 15px; }
+        .entry-title { font-size: 18px; font-weight: bold; color: #1f2937; margin-bottom: 8px; }
+        .entry-meta { font-size: 12px; color: #6b7280; margin-bottom: 3px; }
+        .entry-description { font-size: 13px; color: #374151; margin-bottom: 15px; white-space: pre-wrap; }
+        .attachments { margin-bottom: 15px; }
+        .attachments-header { font-size: 14px; font-weight: bold; margin-bottom: 10px; }
+        .attachment-item { font-size: 12px; color: #6b7280; margin-bottom: 5px; }
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 4px; font-size: 11px; }
+        .page-break { page-break-before: always; }
+        @media print { body { margin: 20px; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="title">CommuniTrack Export</div>
+        <div class="subtitle">Exportiert am ${formatDate(new Date())}</div>
+        ${options.dateRange ? `<div class="subtitle">Zeitraum: ${formatDate(options.dateRange.start)} - ${formatDate(options.dateRange.end)}</div>` : ''}
+        <div class="subtitle">Anzahl Einträge: ${entries.length}</div>
+      </div>
+      
+      ${entries.map((entry, index) => `
+        <div class="entry ${entry.isImportant ? 'important' : ''} ${index > 0 ? 'page-break' : ''}">
+          <div class="entry-header">
+            <div class="entry-title">${entry.title} ${entry.isImportant ? '⭐' : ''}</div>
+            <div class="entry-meta">Datum: ${formatDate(new Date(entry.date))}</div>
+            <div class="entry-meta">Kategorie: ${getCategoryLabel(entry.category)}</div>
+            ${entry.attachments.length > 0 ? `<div class="entry-meta">Anhänge: ${entry.attachments.length} Datei(en)</div>` : ''}
+          </div>
+          
+          <div class="entry-description">${entry.description}</div>
+          
+          ${options.includeImages && entry.attachments.length > 0 ? `
+            <div class="attachments">
+              <div class="attachments-header">Anhänge:</div>
+              ${entry.attachments.map(attachment => `
+                <div class="attachment-item">• ${attachment.fileName} (${formatFileSize(attachment.fileSize)})${attachment.context ? ` - ${attachment.context}` : ''}</div>
+              `).join('')}
+            </div>
+          ` : ''}
+          
+          ${entry.tags.length > 0 ? `
+            <div class="tags">
+              ${entry.tags.map(tag => `<span class="tag">#${tag}</span>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('')}
+    </body>
+    </html>
+  `;
+
+  // Create blob from HTML content
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  return blob;
+};
+
+export const exportToJSON = (entries: Entry[], options: ExportOptions): string => {
+  const exportData = {
+    metadata: {
+      exportDate: new Date().toISOString(),
+      entryCount: entries.length,
+      dateRange: options.dateRange,
+      includeImages: options.includeImages,
+    },
+    entries: entries.map(entry => ({
+      ...entry,
+      // Convert attachments to base64 if including images
+      attachments: options.includeImages 
+        ? entry.attachments 
+        : entry.attachments.map(att => ({
+            ...att,
+            url: '[Bild nicht exportiert]'
+          }))
+    })),
+  };
+  
+  return JSON.stringify(exportData, null, 2);
+};
+
+export const exportToCSV = (entries: Entry[], options: ExportOptions): string => {
+  const headers = [
+    'Titel',
+    'Datum',
+    'Kategorie',
+    'Beschreibung',
+    'Tags',
+    'Wichtig',
+    'Anhänge',
+    'Erstellt am',
+    'Aktualisiert am'
+  ];
+  
+  const rows = entries.map(entry => [
+    `"${entry.title.replace(/"/g, '""')}"`,
+    formatDate(new Date(entry.date)),
+    entry.category,
+    `"${entry.description.replace(/"/g, '""')}"`,
+    `"${entry.tags.join(', ')}"`,
+    entry.isImportant ? 'Ja' : 'Nein',
+    entry.attachments.length.toString(),
+    formatDate(new Date(entry.createdAt)),
+    formatDate(new Date(entry.updatedAt)),
+  ]);
+  
+  return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+};
+
+// Download helper
+export const downloadFile = (content: string | Blob, filename: string, type: string) => {
+  const blob = content instanceof Blob ? content : new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  URL.revokeObjectURL(url);
+};

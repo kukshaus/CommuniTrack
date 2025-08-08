@@ -1,279 +1,231 @@
-'use client';
-
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardContent } from '@/components/ui/Card';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { useStore } from '@/store/useStore';
-import { formatFileSize, getFileTypeIcon } from '@/lib/utils';
-import { 
-  Upload, 
-  X, 
-  Paperclip, 
-  AlertCircle,
-  Image as ImageIcon,
-  Plus
-} from 'lucide-react';
+import React, { useCallback, useState, useRef } from 'react';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { cn, compressImage, generateThumbnail, formatFileSize } from '@/lib/utils';
+import { Attachment } from '@/types';
+import Button from './ui/Button';
 
 interface FileUploadProps {
-  entryId: string;
-  onUploadComplete?: () => void;
+  onFilesAdd: (files: File[]) => void;
+  onFileRemove: (index: number) => void;
+  files: File[];
+  maxFiles?: number;
+  accept?: string;
+  className?: string;
 }
 
-interface PendingFile {
-  id: string;
-  file: File;
-  context: string;
-  uploading: boolean;
-  error?: string;
-}
-
-export function FileUpload({ entryId, onUploadComplete }: FileUploadProps) {
-  const { uploadAttachment } = useStore();
-  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
-  const [dragActive, setDragActive] = useState(false);
+const FileUpload: React.FC<FileUploadProps> = ({
+  onFilesAdd,
+  onFileRemove,
+  files,
+  maxFiles = 10,
+  accept = 'image/*',
+  className,
+}) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle file drops
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles: PendingFile[] = acceptedFiles.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      file,
-      context: '',
-      uploading: false,
-    }));
+  const processFiles = useCallback(async (fileList: FileList | File[]) => {
+    setIsProcessing(true);
+    const newFiles: File[] = [];
     
-    setPendingFiles(prev => [...prev, ...newFiles]);
+    const fileArray = Array.from(fileList);
+    
+    for (const file of fileArray) {
+      if (file.type.startsWith('image/')) {
+        try {
+          const compressedFile = await compressImage(file);
+          newFiles.push(compressedFile);
+        } catch (error) {
+          console.error('Error compressing image:', error);
+          newFiles.push(file);
+        }
+      } else {
+        newFiles.push(file);
+      }
+    }
+    
+    onFilesAdd(newFiles);
+    setIsProcessing(false);
+  }, [onFilesAdd]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.bmp', '.webp'],
-      'application/pdf': ['.pdf'],
-      'text/*': ['.txt'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-    },
-    maxSize: 10 * 1024 * 1024, // 10MB
-  });
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
 
-  // Handle paste events for clipboard images
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const droppedFiles = e.dataTransfer.files;
+    if (droppedFiles.length > 0) {
+      processFiles(droppedFiles);
+    }
+  }, [processFiles]);
 
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          const file = item.getAsFile();
-          if (file) {
-            const newFile: PendingFile = {
-              id: Math.random().toString(36).substr(2, 9),
-              file,
-              context: 'Aus Zwischenablage',
-              uploading: false,
-            };
-            setPendingFiles(prev => [...prev, newFile]);
-          }
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (selectedFiles) {
+      processFiles(selectedFiles);
+    }
+    // Reset input value to allow same file selection
+    e.target.value = '';
+  }, [processFiles]);
+
+  const handlePaste = useCallback((e: ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const files: File[] = [];
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          files.push(file);
         }
       }
-    };
-
-    document.addEventListener('paste', handlePaste);
-    return () => document.removeEventListener('paste', handlePaste);
-  }, []);
-
-  const updateFileContext = (fileId: string, context: string) => {
-    setPendingFiles(prev => 
-      prev.map(f => f.id === fileId ? { ...f, context } : f)
-    );
-  };
-
-  const removeFile = (fileId: string) => {
-    setPendingFiles(prev => prev.filter(f => f.id !== fileId));
-  };
-
-  const uploadFile = async (pendingFile: PendingFile) => {
-    try {
-      setPendingFiles(prev => 
-        prev.map(f => f.id === pendingFile.id ? { ...f, uploading: true, error: undefined } : f)
-      );
-
-      await uploadAttachment(entryId, pendingFile.file, pendingFile.context);
-      
-      // Remove from pending files
-      setPendingFiles(prev => prev.filter(f => f.id !== pendingFile.id));
-      onUploadComplete?.();
-    } catch (error) {
-      setPendingFiles(prev => 
-        prev.map(f => f.id === pendingFile.id ? { 
-          ...f, 
-          uploading: false, 
-          error: error instanceof Error ? error.message : 'Upload failed' 
-        } : f)
-      );
     }
-  };
-
-  const uploadAllFiles = async () => {
-    const filesToUpload = pendingFiles.filter(f => !f.uploading);
     
-    for (const file of filesToUpload) {
-      await uploadFile(file);
+    if (files.length > 0) {
+      processFiles(files);
     }
-  };
+  }, [processFiles]);
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    onDrop(files);
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  // Add paste event listener
+  React.useEffect(() => {
+    document.addEventListener('paste', handlePaste);
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, [handlePaste]);
+
+  const canAddMore = files.length < maxFiles;
 
   return (
-    <div className="space-y-4">
-      {/* Drop Zone */}
-      <Card className={`transition-colors ${
-        isDragActive || dragActive ? 'border-primary bg-primary/5' : ''
-      }`}>
-        <CardContent className="p-6">
-          <div
-            {...getRootProps()}
-            className="text-center space-y-4 cursor-pointer"
-            onDragEnter={() => setDragActive(true)}
-            onDragLeave={() => setDragActive(false)}
-            onDrop={() => setDragActive(false)}
-          >
-            <input {...getInputProps()} />
-            <div className="flex flex-col items-center gap-2">
-              <div className="p-3 rounded-full bg-muted">
-                <Upload className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">
-                  Dateien hierher ziehen oder klicken zum Auswählen
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Bilder, PDFs, Dokumente (max. 10MB)
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-4 text-center">
-            <p className="text-xs text-muted-foreground">
-              💡 Tipp: Sie können auch Bilder mit Strg+V aus der Zwischenablage einfügen
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Alternative Upload Button */}
-      <div className="text-center">
+    <div className={cn('space-y-4', className)}>
+      {/* Upload Area */}
+      <div
+        className={cn(
+          'border-2 border-dashed rounded-lg p-6 text-center transition-colors',
+          isDragOver
+            ? 'border-primary-500 bg-primary-50'
+            : 'border-gray-300 hover:border-gray-400',
+          !canAddMore && 'opacity-50 pointer-events-none'
+        )}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <input
           ref={fileInputRef}
           type="file"
           multiple
-          onChange={handleFileInputChange}
-          accept="image/*,.pdf,.txt,.doc,.docx"
+          accept={accept}
+          onChange={handleFileSelect}
           className="hidden"
+          disabled={!canAddMore}
         />
-        <Button
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Dateien auswählen
-        </Button>
+        
+        <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+        
+        <div className="space-y-2">
+          <p className="text-lg font-medium text-gray-900">
+            Dateien hier ablegen oder
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!canAddMore || isProcessing}
+          >
+            {isProcessing ? 'Verarbeite...' : 'Dateien auswählen'}
+          </Button>
+          <p className="text-sm text-gray-500">
+            Oder Strg+V zum Einfügen aus der Zwischenablage
+          </p>
+          <p className="text-xs text-gray-400">
+            Max. {maxFiles} Dateien, Bilder werden automatisch komprimiert
+          </p>
+        </div>
       </div>
 
-      {/* Pending Files */}
-      {pendingFiles.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium flex items-center gap-2">
-              <Paperclip className="h-4 w-4" />
-              Dateien zum Upload ({pendingFiles.length})
-            </h4>
-            <Button
-              size="sm"
-              onClick={uploadAllFiles}
-              disabled={pendingFiles.some(f => f.uploading)}
-            >
-              Alle hochladen
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            {pendingFiles.map((pendingFile) => (
-              <Card key={pendingFile.id} className="p-3">
-                <div className="flex items-start gap-3">
-                  <div className="text-lg">
-                    {getFileTypeIcon(pendingFile.file.type)}
-                  </div>
-                  
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium">
-                          {pendingFile.file.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatFileSize(pendingFile.file.size)}
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          onClick={() => uploadFile(pendingFile)}
-                          disabled={pendingFile.uploading}
-                        >
-                          {pendingFile.uploading ? (
-                            <LoadingSpinner size="sm" />
-                          ) : (
-                            'Upload'
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeFile(pendingFile.id)}
-                          disabled={pendingFile.uploading}
-                          className="h-8 w-8"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <Input
-                      placeholder="Kontext/Beschreibung (optional)"
-                      value={pendingFile.context}
-                      onChange={(e) => updateFileContext(pendingFile.id, e.target.value)}
-                      disabled={pendingFile.uploading}
-                      className="text-xs"
-                    />
-                    
-                    {pendingFile.error && (
-                      <div className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertCircle className="h-3 w-3" />
-                        {pendingFile.error}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
+      {/* File List */}
+      {files.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="font-medium text-gray-900">
+            Ausgewählte Dateien ({files.length})
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {files.map((file, index) => (
+              <FilePreview
+                key={`${file.name}-${index}`}
+                file={file}
+                onRemove={() => onFileRemove(index)}
+              />
             ))}
           </div>
         </div>
       )}
     </div>
   );
+};
+
+interface FilePreviewProps {
+  file: File;
+  onRemove: () => void;
 }
+
+const FilePreview: React.FC<FilePreviewProps> = ({ file, onRemove }) => {
+  const [thumbnail, setThumbnail] = useState<string>('');
+
+  React.useEffect(() => {
+    if (file.type.startsWith('image/')) {
+      generateThumbnail(file).then(setThumbnail);
+    }
+  }, [file]);
+
+  return (
+    <div className="relative bg-white border border-gray-200 rounded-lg p-3">
+      <button
+        onClick={onRemove}
+        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+      >
+        <X className="h-3 w-3" />
+      </button>
+      
+      <div className="flex items-center space-x-3">
+        <div className="flex-shrink-0">
+          {thumbnail ? (
+            <img
+              src={thumbnail}
+              alt={file.name}
+              className="h-10 w-10 rounded object-cover"
+            />
+          ) : (
+            <div className="h-10 w-10 bg-gray-100 rounded flex items-center justify-center">
+              <ImageIcon className="h-5 w-5 text-gray-400" />
+            </div>
+          )}
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">
+            {file.name}
+          </p>
+          <p className="text-xs text-gray-500">
+            {formatFileSize(file.size)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FileUpload;

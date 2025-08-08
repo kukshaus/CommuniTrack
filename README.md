@@ -1,230 +1,222 @@
-# CommuniTrack
+# 📝 CommuniTrack
 
-Eine moderne Web-App zur privaten Dokumentation, Organisation und Export von kommunikationsbezogenen Ereignissen.
+Eine moderne Web-Anwendung zur strukturierten Dokumentation von kommunikationsbezogenen Ereignissen mit einer Ex-Partnerin für rechtliche Zwecke.
 
 ## 🚀 Features
 
-- **📝 Eintragsverwaltung**: Erstellen, bearbeiten und organisieren von Ereignissen mit Titel, Beschreibung, Datum und Kategorien
-- **🏷️ Kategorisierung**: Vordefinierte Kategorien (Konflikt, Gespräch, Verhalten, Beweis, Kindbetreuung, etc.)
-- **📎 Datei-Upload**: Drag & Drop und Copy-Paste Unterstützung für Bilder und Dokumente
-- **🔍 Filter & Suche**: Umfangreiche Filter- und Suchfunktionen nach Zeitraum, Kategorie, Tags und mehr
-- **📄 Export-Funktionen**: PDF, JSON und CSV Export mit verschiedenen Optionen
-- **⭐ Wichtige Einträge**: Markierung wichtiger Ereignisse
-- **🏷️ Tagging-System**: Flexible Tag-Verwaltung für bessere Organisation
-- **📱 Responsive Design**: Mobile-first Design für alle Geräte
-- **🔐 Sichere Authentifizierung**: Benutzer-Login mit Supabase Auth
-- **☁️ Cloud-Speicherung**: Verschlüsselte Datenspeicherung mit Supabase
+- ✍️ **Einfache Eintragserstellung** mit Titel, Datum, Beschreibung und Kategorien
+- 📋 **Drag & Drop + Copy & Paste** für Bilder und Screenshots
+- 📅 **Chronologische Timeline-Ansicht** aller Einträge
+- 🔍 **Erweiterte Filter- und Suchfunktionen**
+- 📄 **Export zu PDF, JSON und CSV** für rechtliche Zwecke
+- 📱 **Mobile-First Responsive Design**
+- 🛡️ **Sichere MongoDB-Datenspeicherung**
 
 ## 🛠️ Technologie-Stack
 
-- **Frontend**: Next.js 14, React, TypeScript
-- **Styling**: Tailwind CSS mit Custom Design System
-- **State Management**: Zustand
-- **Backend**: Supabase (PostgreSQL, Auth, Storage)
-- **File Upload**: React Dropzone mit Copy-Paste Support
-- **Export**: jsPDF, FileSaver.js
-- **Icons**: Lucide React
+- **Frontend:** Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend:** Next.js API Routes
+- **Datenbank:** MongoDB mit Docker
+- **State Management:** Zustand
+- **Export:** React-PDF, CSV-Export
+- **UI:** Lucide Icons, responsive Design
 
-## 📦 Installation
-
-### Voraussetzungen
-
-- Node.js 18+ 
-- npm oder yarn
-- Supabase Account
+## 📦 Installation & Setup
 
 ### 1. Repository klonen
-
-\`\`\`bash
+```bash
 git clone <repository-url>
-cd communitrack
-\`\`\`
+cd CommuniTrack
+```
 
 ### 2. Dependencies installieren
-
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
-### 3. Supabase Setup
+### 3. MongoDB mit Docker starten
+```bash
+# MongoDB Container starten
+docker-compose up -d mongodb
 
-#### Option A: Geführtes Setup (Empfohlen)
+# Optional: MongoDB Express für Database Management
+docker-compose up -d mongo-express
+```
 
-1. Erstellen Sie ein neues Projekt auf [supabase.com](https://supabase.com)
-2. Erstellen Sie eine \`.env.local\` Datei mit Ihren Supabase-Credentials (siehe nächster Schritt)
-3. Führen Sie das geführte Setup aus:
+### 4. Umgebungsvariablen konfigurieren
+```bash
+# .env.local erstellen
+cp env.template .env.local
 
-\`\`\`bash
-npm run setup:manual
-\`\`\`
+# .env.local bearbeiten und MongoDB URI anpassen
+MONGODB_URI=mongodb://admin:password@localhost:27017/communitrack
+```
 
-Das Script führt Sie Schritt für Schritt durch die Einrichtung ohne zusätzliche Tools.
-
-#### Option B: Automatisches Setup (benötigt Supabase CLI)
-
-1. Installieren Sie die Supabase CLI:
-   - **Windows**: \`scoop install supabase\` oder \`choco install supabase\`
-   - **macOS**: \`brew install supabase/tap/supabase\`
-   - **Linux**: Siehe [Supabase CLI Docs](https://supabase.com/docs/guides/cli/getting-started)
-
-2. Führen Sie das automatische Setup aus:
-
-\`\`\`bash
-npm run setup
-\`\`\`
-
-#### Option C: Komplett manuelles Setup
-
-1. Erstellen Sie ein neues Projekt auf [supabase.com](https://supabase.com)
-2. Führen Sie das SQL-Schema aus \`supabase_schema.sql\` in Ihrem Supabase SQL Editor aus
-3. Erstellen Sie einen Storage Bucket namens "attachments"
-4. Kopieren Sie Ihre Supabase URL und anon key
-
-### 4. Umgebungsvariablen
-
-Erstellen Sie eine \`.env.local\` Datei im Projektverzeichnis:
-
-\`\`\`env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-\`\`\`
-
-**So erhalten Sie diese Werte:**
-1. Gehen Sie zu [supabase.com](https://supabase.com) und melden Sie sich an
-2. Wählen Sie Ihr Projekt aus oder erstellen Sie ein neues
-3. Gehen Sie zu **Settings → API**
-4. Kopieren Sie die **Project URL** (NEXT_PUBLIC_SUPABASE_URL)
-5. Kopieren Sie den **anon/public key** (NEXT_PUBLIC_SUPABASE_ANON_KEY)
-6. Ersetzen Sie die Werte in der \`.env.local\` Datei
-
-**Wichtig:** Die Datei muss genau \`.env.local\` heißen (nicht \`.env\` oder \`.env.example\`)
-
-### 5. Entwicklungsserver starten
-
-\`\`\`bash
+### 5. Anwendung starten
+```bash
 npm run dev
-\`\`\`
+```
 
-Die App ist nun unter [http://localhost:3000](http://localhost:3000) verfügbar.
+Die Anwendung ist nun unter [http://localhost:3000](http://localhost:3000) verfügbar.
 
-## 📋 Erste Schritte
+## 🗄️ Storage Options
 
-1. **Registrierung**: Erstellen Sie ein neues Benutzerkonto
-2. **Erster Eintrag**: Klicken Sie auf "Neuer Eintrag" um Ihr erstes Ereignis zu dokumentieren
-3. **Dateien hinzufügen**: Verwenden Sie Drag & Drop oder Copy-Paste um Bilder und Dokumente hinzuzufügen
-4. **Organisieren**: Nutzen Sie Kategorien und Tags zur besseren Organisation
-5. **Exportieren**: Exportieren Sie Ihre Daten als PDF für rechtliche Zwecke
+The application supports multiple storage backends:
 
-## 🗂️ Dateistruktur
+### 1. In-Memory Storage (Default/Demo)
+- **No setup required** - perfect for testing and development
+- Includes sample data for immediate testing
+- Data is lost when the application restarts
 
-\`\`\`
-src/
-├── app/                    # Next.js App Router
-├── components/             # React Komponenten
-│   ├── ui/                # Basis UI Komponenten
-│   ├── AuthPage.tsx       # Authentifizierung
-│   ├── Dashboard.tsx      # Haupt-Dashboard
-│   ├── EntryForm.tsx      # Formular für Einträge
-│   ├── EntryList.tsx      # Liste der Einträge
-│   ├── FilterBar.tsx      # Filter-Komponente
-│   ├── FileUpload.tsx     # Datei-Upload mit Drag & Drop
-│   └── ExportDialog.tsx   # Export-Dialog
-├── hooks/                 # Custom React Hooks
-├── lib/                   # Utility-Funktionen
-├── store/                 # Zustand Store
-└── types/                 # TypeScript Definitionen
-\`\`\`
+### 2. MongoDB with Docker
+```bash
+docker-compose up -d mongodb
+```
 
-## 🔧 Konfiguration
+### 3. MongoDB Express (Optional)
+```bash
+docker-compose up -d mongo-express
+```
+MongoDB Express ist dann unter [http://localhost:8081](http://localhost:8081) verfügbar.
 
-### Supabase Policies
+**Login Daten:**
+- Username: admin
+- Password: admin
 
-Die App verwendet Row Level Security (RLS). Alle notwendigen Policies sind im \`supabase_schema.sql\` enthalten.
+### 4. Custom MongoDB
+Edit `.env.local` with your MongoDB connection string:
+```
+MONGODB_URI=mongodb://your-connection-string
+```
 
-### Storage Setup
+## 📊 Datenbankschema
 
-1. Gehen Sie zu Storage in Ihrem Supabase Dashboard
-2. Erstellen Sie einen neuen Bucket namens "attachments"
-3. Setzen Sie den Bucket auf "Private"
-4. Die notwendigen Storage Policies sind bereits im Schema enthalten
+### Entries Collection
+```typescript
+interface Entry {
+  _id?: string;
+  title: string;
+  date: Date;
+  description: string;
+  category: 'konflikt' | 'gespraech' | 'verhalten' | 'beweis' | 'kindbetreuung' | 'sonstiges';
+  attachments: Attachment[];
+  tags: string[];
+  isImportant: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
 
-## 📱 Mobile Optimierung
+### Attachments Schema
+```typescript
+interface Attachment {
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  url: string;
+  thumbnail?: string;
+  context?: string;
+  isImportant: boolean;
+  uploadedAt: Date;
+}
+```
 
-Die App ist vollständig responsive und wurde mobile-first entwickelt:
+## 🔧 Verfügbare Scripts
 
-- Touch-freundliche Bedienelemente
-- Optimierte Layouts für kleine Bildschirme
-- Copy-Paste Unterstützung auf mobilen Geräten
-- Schnelle Ladezeiten
+```bash
+# Entwicklungsserver starten
+npm run dev
+
+# Production Build erstellen
+npm run build
+
+# Production Server starten
+npm start
+
+# Linting
+npm run lint
+
+# Docker Services starten
+docker-compose up -d
+
+# Docker Services stoppen
+docker-compose down
+
+# Datenbank zurücksetzen
+docker-compose down -v && docker-compose up -d
+```
+
+## 📱 Nutzung
+
+### 1. Neuen Eintrag erstellen
+- Klicken Sie auf "Neuer Eintrag"
+- Füllen Sie alle erforderlichen Felder aus
+- Laden Sie optional Bilder per Drag & Drop oder Copy & Paste hoch
+- Speichern Sie den Eintrag
+
+### 2. Einträge filtern und suchen
+- Nutzen Sie die Suchleiste für schnelle Textsuche
+- Verwenden Sie erweiterte Filter für Datum, Kategorie, Tags etc.
+- Filtern Sie nach Einträgen mit/ohne Medien
+
+### 3. Export für rechtliche Zwecke
+- Klicken Sie auf "Export"
+- Wählen Sie das gewünschte Format (PDF empfohlen)
+- Konfigurieren Sie Optionen wie Zeitraum und Bildeinschluss
+- Starten Sie den Export
 
 ## 🔒 Sicherheit & Datenschutz
 
-- **Row Level Security**: Benutzer sehen nur ihre eigenen Daten
-- **Sichere Authentifizierung**: E-Mail/Passwort mit Supabase Auth
-- **Verschlüsselte Übertragung**: HTTPS für alle Requests
-- **Private Storage**: Dateien sind nur für den Benutzer zugänglich
-- **No-Index**: App wird nicht von Suchmaschinen indexiert
+- Alle Daten werden lokal in MongoDB gespeichert
+- Keine Cloud-Synchronisation ohne explizite Konfiguration
+- Bilder werden komprimiert vor der Speicherung
+- Export-Passwortschutz verfügbar (bald)
 
-## 📄 Export-Funktionen
+## 🎨 Design-Prinzipien
 
-### PDF Export
-- Vollständiger Export aller Einträge
-- Chronologische Sortierung
-- Inklusive Metadaten und Anhang-Listen
-- Professionelles Layout für rechtliche Zwecke
+- **Mobile First:** Optimiert für Smartphone-Nutzung
+- **Zero Clutter:** Nur wesentliche Elemente sichtbar
+- **Sofortige Reaktion:** Keine unnötigen Ladezeiten
+- **Klarer Sprachstil:** Verständlich ohne juristische Fachbegriffe
 
-### JSON Export
-- Vollständige Datenstruktur
-- Inklusive aller Metadaten
-- Maschinenlesbar für weitere Verarbeitung
+## 🐛 Fehlerbehebung
 
-### CSV Export
-- Tabellarische Darstellung
-- Import in Excel/Google Sheets möglich
-- Für statistische Auswertungen
+### MongoDB Verbindungsfehler
+```bash
+# Prüfen ob Container läuft
+docker ps
 
-## 🚀 Deployment
+# Container neu starten
+docker-compose restart mongodb
 
-### Vercel (Empfohlen)
+# Logs prüfen
+docker-compose logs mongodb
+```
 
-1. Repository auf GitHub/GitLab pushen
-2. Projekt mit Vercel verbinden
-3. Umgebungsvariablen in Vercel setzen
-4. Automatisches Deployment
+### Next.js Build Fehler
+```bash
+# Cache löschen
+rm -rf .next
 
-### Andere Plattformen
+# Dependencies neu installieren
+rm -rf node_modules package-lock.json
+npm install
 
-Die App kann auf jeder Node.js-kompatiblen Plattform deployed werden:
-- Netlify
-- Railway
-- DigitalOcean App Platform
-- AWS Amplify
-
-## 🤝 Beitragen
-
-Da es sich um eine private Dokumentations-App handelt, sind externe Beiträge nicht vorgesehen. Der Code dient als Referenz-Implementierung.
+# Neu builden
+npm run build
+```
 
 ## 📄 Lizenz
 
-Private Nutzung - Alle Rechte vorbehalten.
+Dieses Projekt ist für private Nutzung entwickelt. Bitte beachten Sie die lokalen Gesetze bezüglich Dokumentation und Datenschutz.
 
-## 🆘 Support
+## 🤝 Beitragen
 
-Bei technischen Problemen:
+Dies ist ein privates Projekt für spezifische Anwendungsfälle. Für Verbesserungsvorschläge oder Bugs erstellen Sie bitte ein Issue.
 
-1. Überprüfen Sie die Supabase-Konfiguration
-2. Kontrollieren Sie die Umgebungsvariablen
-3. Schauen Sie in die Browser-Konsole für Fehlermeldungen
-4. Überprüfen Sie die Supabase Logs
+## 📞 Support
 
-## ⚠️ Wichtige Hinweise
-
-- **Backup**: Regelmäßige Exports als Backup empfohlen
-- **Browser**: Moderne Browser (Chrome, Firefox, Safari, Edge) erforderlich
-- **JavaScript**: JavaScript muss aktiviert sein
-- **Storage**: Dateigröße pro Upload auf 10MB begrenzt
-
----
-
-**CommuniTrack** - Ihre private Dokumentationslösung für wichtige Kommunikationsereignisse.
+Bei Fragen oder Problemen:
+1. Prüfen Sie die Dokumentation
+2. Schauen Sie in die Logs: `docker-compose logs`
+3. Erstellen Sie ein Issue mit detaillierter Beschreibung

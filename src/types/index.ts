@@ -1,79 +1,53 @@
-export interface Category {
-  id: string;
-  name: string;
-  color: string;
-  created_at: string;
-}
-
 export interface Entry {
-  id: string;
-  user_id: string;
+  _id?: string;
   title: string;
-  description?: string;
-  category_id?: string;
-  category?: Category;
-  event_date: string;
-  is_important: boolean;
+  date: Date;
+  description: string;
+  category: EntryCategory;
+  attachments: Attachment[];
   tags: string[];
-  created_at: string;
-  updated_at: string;
-  attachments?: Attachment[];
+  isImportant: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Attachment {
-  id: string;
-  entry_id: string;
-  file_name: string;
-  file_path: string;
-  file_size?: number;
-  file_type?: string;
-  is_important: boolean;
+  _id?: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  url: string;
+  thumbnail?: string;
   context?: string;
-  created_at: string;
+  isImportant: boolean;
+  uploadedAt: Date;
 }
 
-export interface CreateEntryData {
-  title: string;
-  description?: string;
-  category_id?: string;
-  event_date: string;
-  is_important?: boolean;
-  tags?: string[];
-}
-
-export interface UpdateEntryData extends Partial<CreateEntryData> {
-  id: string;
-}
+export type EntryCategory = 
+  | 'konflikt'
+  | 'gespraech'
+  | 'verhalten'
+  | 'beweis'
+  | 'kindbetreuung'
+  | 'sonstiges';
 
 export interface FilterOptions {
-  startDate?: string;
-  endDate?: string;
-  categoryId?: string;
-  isImportant?: boolean;
-  hasAttachments?: boolean;
+  startDate?: Date;
+  endDate?: Date;
+  category?: EntryCategory;
   searchTerm?: string;
+  hasMedia?: boolean;
   tags?: string[];
+  isImportant?: boolean;
 }
 
 export interface ExportOptions {
   format: 'pdf' | 'json' | 'csv';
-  includeAttachments: boolean;
-  dateRange?: {
-    start: string;
-    end: string;
-  };
-  categories?: string[];
+  includeImages: boolean;
+  passwordProtected: boolean;
   password?: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  created_at: string;
-}
-
-export interface AuthState {
-  user: User | null;
-  loading: boolean;
-  error: string | null;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
 }
