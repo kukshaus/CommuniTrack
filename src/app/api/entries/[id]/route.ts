@@ -6,8 +6,18 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+    
     const storage = await getStorage();
-    const entry = await storage.findById(params.id);
+    const entry = await storage.findById(params.id, userId);
 
     if (!entry) {
       return NextResponse.json(
@@ -33,12 +43,19 @@ export async function PUT(
   try {
     const updates = await request.json();
     
+    if (!updates.userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+    
     const storage = await getStorage();
     const updatedEntry = await storage.updateOne(params.id, {
       ...updates,
       date: new Date(updates.date),
       updatedAt: new Date(),
-    });
+    }, updates.userId);
 
     if (!updatedEntry) {
       return NextResponse.json(
@@ -62,8 +79,18 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+    
     const storage = await getStorage();
-    const success = await storage.deleteOne(params.id);
+    const success = await storage.deleteOne(params.id, userId);
 
     if (!success) {
       return NextResponse.json(

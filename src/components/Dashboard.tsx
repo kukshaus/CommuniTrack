@@ -34,9 +34,11 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
   const [editingEntry, setEditingEntry] = useState<Entry | undefined>();
 
   const loadEntries = useCallback(async () => {
+    if (!user?.id) return;
+    
     setLoading(true);
     try {
-      const response = await fetch('/api/entries');
+      const response = await fetch(`/api/entries?userId=${user.id}`);
       if (response.ok) {
         const entriesData = await response.json();
         setEntries(entriesData);
@@ -46,7 +48,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
     } finally {
       setLoading(false);
     }
-  }, [setEntries, setLoading]);
+  }, [setEntries, setLoading, user?.id]);
 
   // Load entries on component mount
   useEffect(() => {

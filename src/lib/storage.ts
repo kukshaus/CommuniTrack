@@ -5,14 +5,21 @@ class InMemoryStorage {
   private entries: Entry[] = [];
   private nextId = 1;
 
-  async findAll(): Promise<Entry[]> {
-    return [...this.entries].sort((a, b) => 
+  async findAll(userId?: string): Promise<Entry[]> {
+    let filtered = [...this.entries];
+    if (userId) {
+      filtered = filtered.filter(entry => entry.userId === userId);
+    }
+    return filtered.sort((a, b) => 
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   }
 
-  async findById(id: string): Promise<Entry | null> {
-    return this.entries.find(entry => entry._id === id) || null;
+  async findById(id: string, userId?: string): Promise<Entry | null> {
+    const entry = this.entries.find(entry => entry._id === id);
+    if (!entry) return null;
+    if (userId && entry.userId !== userId) return null;
+    return entry;
   }
 
   async insertOne(entry: Omit<Entry, '_id'>): Promise<Entry> {
@@ -25,25 +32,33 @@ class InMemoryStorage {
     return newEntry;
   }
 
-  async updateOne(id: string, updates: Partial<Entry>): Promise<Entry | null> {
+  async updateOne(id: string, updates: Partial<Entry>, userId?: string): Promise<Entry | null> {
     const index = this.entries.findIndex(entry => entry._id === id);
     if (index === -1) return null;
     
-    this.entries[index] = { ...this.entries[index], ...updates };
+    const entry = this.entries[index];
+    if (userId && entry.userId !== userId) return null;
+    
+    this.entries[index] = { ...entry, ...updates };
     return this.entries[index];
   }
 
-  async deleteOne(id: string): Promise<boolean> {
+  async deleteOne(id: string, userId?: string): Promise<boolean> {
     const index = this.entries.findIndex(entry => entry._id === id);
     if (index === -1) return false;
+    
+    const entry = this.entries[index];
+    if (userId && entry.userId !== userId) return false;
     
     this.entries.splice(index, 1);
     return true;
   }
 
   // Add some sample data for development
-  async seedData() {
-    if (this.entries.length === 0) {
+  async seedData(userId: string = "demo-user") {
+    // Only add demo data if no entries exist for this user
+    const userEntries = this.entries.filter(entry => entry.userId === userId);
+    if (userEntries.length === 0) {
       await this.insertOne({
         title: "Willkommen bei CommuniTrack",
         date: new Date(),
@@ -52,7 +67,7 @@ class InMemoryStorage {
         tags: ["willkommen", "beispiel", "demo"],
         isImportant: false,
         attachments: [],
-        userId: "demo-user",
+        userId: userId,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -65,7 +80,7 @@ class InMemoryStorage {
         tags: ["wichtig", "dokumentation"],
         isImportant: true,
         attachments: [],
-        userId: "demo-user",
+        userId: userId,
         createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
         updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
       });
@@ -75,11 +90,11 @@ class InMemoryStorage {
 
 // Storage interface
 export interface StorageAdapter {
-  findAll(): Promise<Entry[]>;
-  findById(id: string): Promise<Entry | null>;
+  findAll(userId?: string): Promise<Entry[]>;
+  findById(id: string, userId?: string): Promise<Entry | null>;
   insertOne(entry: Omit<Entry, '_id'>): Promise<Entry>;
-  updateOne(id: string, updates: Partial<Entry>): Promise<Entry | null>;
-  deleteOne(id: string): Promise<boolean>;
+  updateOne(id: string, updates: Partial<Entry>, userId?: string): Promise<Entry | null>;
+  deleteOne(id: string, userId?: string): Promise<boolean>;
 }
 
 // Global storage for Next.js serverless environment
@@ -116,34 +131,37 @@ export async function getStorage(): Promise<StorageAdapter> {
 
   // Create MongoDB adapter with error handling for each operation
   const mongoAdapter: StorageAdapter = {
-    async findAll() {
+    async findAll(userId?: string) {
       try {
         const { getDatabase } = await import('./mongodb');
         const db = await getDatabase();
-        const entries = await db.collection('entries').find({}).sort({ date: -1 }).toArray();
+        const filter = userId ? { userId } : {};
+        const entries = await db.collection('entries').find(filter).sort({ date: -1 }).toArray();
         return entries.map(entry => ({ ...entry, _id: entry._id.toString() })) as Entry[];
       } catch (error) {
         console.warn('MongoDB findAll failed, switching to in-memory storage:', error instanceof Error ? error.message : 'Unknown error');
         useInMemoryStorage = true;
         const storage = getGlobalStorage();
         await storage.seedData();
-        return storage.findAll();
+        return storage.findAll(userId);
       }
     },
     
-    async findById(id) {
+    async findById(id, userId?: string) {
       try {
-        if (useInMemoryStorage) return getGlobalStorage().findById(id);
+        if (useInMemoryStorage) return getGlobalStorage().findById(id, userId);
         
         const { getDatabase } = await import('./mongodb');
         const { ObjectId } = await import('mongodb');
         const db = await getDatabase();
-        const entry = await db.collection('entries').findOne({ _id: new ObjectId(id) });
+        const filter: any = { _id: new ObjectId(id) };
+        if (userId) filter.userId = userId;
+        const entry = await db.collection('entries').findOne(filter);
         return entry ? { ...entry, _id: entry._id.toString() } as Entry : null;
       } catch (error) {
         console.warn('MongoDB findById failed, switching to in-memory storage:', error instanceof Error ? error.message : 'Unknown error');
         useInMemoryStorage = true;
-        return getGlobalStorage().findById(id);
+        return getGlobalStorage().findById(id, userId);
       }
     },
     
@@ -164,15 +182,17 @@ export async function getStorage(): Promise<StorageAdapter> {
       }
     },
     
-    async updateOne(id, updates) {
+    async updateOne(id, updates, userId?: string) {
       try {
-        if (useInMemoryStorage) return getGlobalStorage().updateOne(id, updates);
+        if (useInMemoryStorage) return getGlobalStorage().updateOne(id, updates, userId);
         
         const { getDatabase } = await import('./mongodb');
         const { ObjectId } = await import('mongodb');
         const db = await getDatabase();
+        const filter: any = { _id: new ObjectId(id) };
+        if (userId) filter.userId = userId;
         const result = await db.collection('entries').updateOne(
-          { _id: new ObjectId(id) },
+          filter,
           { $set: { ...updates, updatedAt: new Date() } }
         );
         
@@ -183,23 +203,25 @@ export async function getStorage(): Promise<StorageAdapter> {
       } catch (error) {
         console.warn('MongoDB updateOne failed, switching to in-memory storage:', error instanceof Error ? error.message : 'Unknown error');
         useInMemoryStorage = true;
-        return getGlobalStorage().updateOne(id, updates);
+        return getGlobalStorage().updateOne(id, updates, userId);
       }
     },
     
-    async deleteOne(id) {
+    async deleteOne(id, userId?: string) {
       try {
-        if (useInMemoryStorage) return getGlobalStorage().deleteOne(id);
+        if (useInMemoryStorage) return getGlobalStorage().deleteOne(id, userId);
         
         const { getDatabase } = await import('./mongodb');
         const { ObjectId } = await import('mongodb');
         const db = await getDatabase();
-        const result = await db.collection('entries').deleteOne({ _id: new ObjectId(id) });
+        const filter: any = { _id: new ObjectId(id) };
+        if (userId) filter.userId = userId;
+        const result = await db.collection('entries').deleteOne(filter);
         return result.deletedCount > 0;
       } catch (error) {
         console.warn('MongoDB deleteOne failed, switching to in-memory storage:', error instanceof Error ? error.message : 'Unknown error');
         useInMemoryStorage = true;
-        return getGlobalStorage().deleteOne(id);
+        return getGlobalStorage().deleteOne(id, userId);
       }
     },
   };

@@ -2,10 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStorage } from '@/lib/storage';
 import { Entry } from '@/types';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+    
     const storage = await getStorage();
-    const entries = await storage.findAll();
+    const entries = await storage.findAll(userId);
     return NextResponse.json(entries);
   } catch (error) {
     console.error('Error fetching entries:', error);
@@ -19,6 +29,13 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const entryData: Omit<Entry, '_id'> = await request.json();
+    
+    if (!entryData.userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
     
     const storage = await getStorage();
     const newEntry = await storage.insertOne({

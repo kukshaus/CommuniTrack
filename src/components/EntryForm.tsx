@@ -73,6 +73,11 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
     if (!validateForm()) {
       return;
     }
+
+    if (!user?.id) {
+      console.error('User not authenticated');
+      return;
+    }
     
     setIsSaving(true);
     setLoading(true);
@@ -103,7 +108,7 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
         attachments: [...(entry?.attachments || []), ...attachments],
         createdAt: entry?.createdAt || new Date(),
         updatedAt: new Date(),
-        userId: user?.id || '', // Assign entry to current user
+        userId: user.id, // Assign entry to current user
       };
 
       if (entry?._id) {

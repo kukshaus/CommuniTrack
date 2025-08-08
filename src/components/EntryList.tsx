@@ -20,7 +20,7 @@ interface EntryListProps {
 }
 
 const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
-  const { filteredEntries, deleteEntry, setLoading } = useStore();
+  const { filteredEntries, deleteEntry, setLoading, user } = useStore();
   const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -39,9 +39,14 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
       return;
     }
 
+    if (!user?.id) {
+      console.error('User not authenticated');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await fetch(`/api/entries/${entryId}`, {
+      const response = await fetch(`/api/entries/${entryId}?userId=${user.id}`, {
         method: 'DELETE',
       });
 
