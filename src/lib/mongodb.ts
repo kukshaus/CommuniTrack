@@ -9,7 +9,7 @@ const options = {
   // Disable authentication for local development
   authSource: 'admin',
   retryWrites: true,
-  w: 'majority',
+  w: 'majority' as const,
 };
 
 let client: MongoClient;
@@ -18,7 +18,7 @@ let clientPromise: Promise<MongoClient>;
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  let globalWithMongo = global as typeof globalThis & {
+  const globalWithMongo = global as typeof globalThis & {
     _mongoClientPromise?: Promise<MongoClient>;
   };
 

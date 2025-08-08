@@ -52,6 +52,7 @@ class InMemoryStorage {
         tags: ["willkommen", "beispiel", "demo"],
         isImportant: false,
         attachments: [],
+        userId: "demo-user",
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -64,6 +65,7 @@ class InMemoryStorage {
         tags: ["wichtig", "dokumentation"],
         isImportant: true,
         attachments: [],
+        userId: "demo-user",
         createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
         updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
       });
@@ -82,6 +84,7 @@ export interface StorageAdapter {
 
 // Global storage for Next.js serverless environment
 declare global {
+  // eslint-disable-next-line no-var
   var globalStorage: InMemoryStorage | undefined;
 }
 

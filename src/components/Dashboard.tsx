@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Plus, Download, FileText, Settings } from 'lucide-react';
 import { Entry } from '@/types';
 import { useStore } from '@/store/useStore';
@@ -33,12 +33,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Entry | undefined>();
 
-  // Load entries on component mount
-  useEffect(() => {
-    loadEntries();
-  }, []);
-
-  const loadEntries = async () => {
+  const loadEntries = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch('/api/entries');
@@ -51,7 +46,12 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setEntries, setLoading]);
+
+  // Load entries on component mount
+  useEffect(() => {
+    loadEntries();
+  }, [loadEntries]);
 
   const handleNewEntry = () => {
     setEditingEntry(undefined);
@@ -243,5 +243,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
     </div>
   );
 });
+
+Dashboard.displayName = 'Dashboard';
 
 export default Dashboard;
