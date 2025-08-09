@@ -4,7 +4,7 @@ import { userService } from '@/lib/services/userService';
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, name, username, currentPassword, newPassword } = body;
+    const { userId, name, username, currentPassword, newPassword, language } = body;
 
     // Basic validation
     if (!userId) {
@@ -29,12 +29,21 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Validate language if provided
+    if (language && !['en', 'de'].includes(language)) {
+      return NextResponse.json(
+        { error: 'Ungültige Sprache' },
+        { status: 400 }
+      );
+    }
+
     // Update user profile using userService
     const result = await userService.updateUserProfile(userId, {
       name: name.trim(),
       username: username.trim(),
       currentPassword,
       newPassword,
+      language,
     });
 
     if (result.success) {

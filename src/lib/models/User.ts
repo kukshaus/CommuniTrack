@@ -5,6 +5,7 @@ export interface User {
   name: string;
   role: 'admin' | 'user';
   password: string; // This will be hashed
+  language: 'en' | 'de';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -14,6 +15,7 @@ export interface UserPublic {
   username: string;
   name: string;
   role: 'admin' | 'user';
+  language: 'en' | 'de';
   createdAt: Date;
   updatedAt: Date;
 }

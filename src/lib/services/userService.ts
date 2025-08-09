@@ -41,6 +41,7 @@ export class UserService {
         name: userData.name,
         password: hashedPassword,
         role: isFirstUser ? 'admin' : 'user',
+        language: 'en', // Default to English
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -127,6 +128,34 @@ export class UserService {
     }
   }
 
+  async migrateUserLanguages(): Promise<{ success: boolean; updatedCount?: number; error?: string }> {
+    try {
+      const collection = await this.getCollection();
+      
+      // Update all users that don't have a language field
+      const result = await collection.updateMany(
+        { language: { $exists: false } },
+        { 
+          $set: { 
+            language: 'en', // Default to English
+            updatedAt: new Date()
+          }
+        }
+      );
+
+      return {
+        success: true,
+        updatedCount: result.modifiedCount
+      };
+    } catch (error) {
+      console.error('Error migrating user languages:', error);
+      return {
+        success: false,
+        error: 'Failed to migrate user language preferences'
+      };
+    }
+  }
+
   async updateUser(userId: string, updates: Partial<Pick<User, 'name' | 'username'>>): Promise<UserPublic | null> {
     try {
       const collection = await this.getCollection();
@@ -160,6 +189,7 @@ export class UserService {
     username?: string;
     currentPassword?: string;
     newPassword?: string;
+    language?: 'en' | 'de';
   }): Promise<{ success: boolean; user?: UserPublic; error?: string }> {
     try {
       const collection = await this.getCollection();
@@ -193,6 +223,10 @@ export class UserService {
 
       if (profileData.username) {
         updateData.username = profileData.username;
+      }
+
+      if (profileData.language) {
+        updateData.language = profileData.language;
       }
 
       // Handle password change if provided

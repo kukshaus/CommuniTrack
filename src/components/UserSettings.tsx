@@ -40,6 +40,51 @@ const UserSettings: React.FC<UserSettingsProps> = ({ onClose }) => {
     }
   };
 
+  const handleLanguageChange = async (newLanguage: 'en' | 'de') => {
+    if (!user) return;
+
+    try {
+      setIsLoading(true);
+      
+      // Immediately update the language in the context for instant UI feedback
+      setLanguage(newLanguage);
+
+      // Save to database
+      const response = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          name: user.name,
+          username: user.username,
+          language: newLanguage,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.user) {
+        // Update user in store with new language preference
+        setUser(result.user);
+        setSuccess(t('settings.success'));
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        // Revert language change if save failed
+        setLanguage(user.language || 'en');
+        setErrors({ general: result.error || t('settings.error') });
+      }
+    } catch (error) {
+      console.error('Language update error:', error);
+      // Revert language change if save failed
+      setLanguage(user.language || 'en');
+      setErrors({ general: t('settings.error') });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
@@ -294,7 +339,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ onClose }) => {
             </label>
             <select
               value={language}
-              onChange={(e) => setLanguage(e.target.value as 'en' | 'de')}
+              onChange={(e) => handleLanguageChange(e.target.value as 'en' | 'de')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="en">{t('settings.language.english')}</option>

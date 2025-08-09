@@ -58,6 +58,7 @@ export interface User {
   username: string;
   name: string;
   role: 'admin' | 'user';
+  language: 'en' | 'de';
   createdAt: Date;
   updatedAt: Date;
 }

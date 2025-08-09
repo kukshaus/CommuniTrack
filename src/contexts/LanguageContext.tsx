@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useStore } from '@/store/useStore';
 
 type Language = 'de' | 'en';
 
@@ -354,7 +355,7 @@ const translations = {
     'button.register.loading': 'Wird erstellt...',
     'toggle.toRegister': 'Noch kein Konto? Hier registrieren',
     'toggle.toLogin': 'Bereits ein Konto? Hier anmelden',
-
+    
     // Errors & Validation
     'error.invalidCredentials': 'Ungültige Anmeldedaten',
     'error.passwordMismatch': 'Passwörter stimmen nicht überein',
@@ -395,7 +396,7 @@ const translations = {
     'gallery.zoom': 'Zoom',
     'gallery.download': 'Herunterladen',
     'gallery.of': 'von',
-
+    
     // Footer
     'footer.text': 'CommuniTrack - Sichere Kommunikationsdokumentation',
   },
@@ -405,18 +406,22 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = useState<Language>('en'); // English as default
+  const { user } = useStore();
 
-  // Load language from localStorage on mount
+  // Load language from user data when user is available
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (user && user.language) {
+      setLanguage(user.language);
+    } else if (typeof window !== 'undefined') {
+      // Fallback to localStorage if user data not available yet
       const savedLanguage = localStorage.getItem('communitrack-language') as Language;
       if (savedLanguage && (savedLanguage === 'de' || savedLanguage === 'en')) {
         setLanguage(savedLanguage);
       }
     }
-  }, []);
+  }, [user]);
 
-  // Save language to localStorage when it changes
+  // Save language to localStorage when it changes (as backup)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('communitrack-language', language);
