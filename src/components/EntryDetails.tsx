@@ -10,13 +10,15 @@ import {
   File,
   ExternalLink,
   Clock,
-  User
+  User,
+  Share
 } from 'lucide-react';
 import { Entry, Attachment } from '@/types';
 import { formatDate } from '@/lib/utils';
 import Button from './ui/Button';
 import ImageModal from './ImageModal';
 import ImageGallery from './ImageGallery';
+import ShareDialog from './ShareDialog';
 
 interface EntryDetailsProps {
   entry: Entry;
@@ -36,6 +38,7 @@ const EntryDetails: React.FC<EntryDetailsProps> = ({
   const [galleryImages, setGalleryImages] = useState<Attachment[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   const handleImageClick = (attachment: Attachment) => {
     // Check if there are multiple images in the entry
@@ -80,6 +83,14 @@ const EntryDetails: React.FC<EntryDetailsProps> = ({
         onClose();
       }
     }
+  };
+
+  const handleShare = () => {
+    setIsShareDialogOpen(true);
+  };
+
+  const handleCloseShareDialog = () => {
+    setIsShareDialogOpen(false);
   };
 
   const getCategoryColor = (category: string) => {
@@ -165,6 +176,15 @@ const EntryDetails: React.FC<EntryDetailsProps> = ({
           >
             <Edit className="h-4 w-4" />
             Bearbeiten
+          </Button>
+          <Button
+            onClick={handleShare}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2 hover:bg-blue-50 hover:border-blue-200"
+          >
+            <Share className="h-4 w-4 text-blue-500" />
+            Teilen
           </Button>
           <Button
             onClick={handleDelete}
@@ -297,6 +317,13 @@ const EntryDetails: React.FC<EntryDetailsProps> = ({
         isOpen={isGalleryOpen}
         onClose={handleCloseGallery}
         onIndexChange={handleGalleryIndexChange}
+      />
+
+      {/* Share Dialog */}
+      <ShareDialog
+        entry={entry}
+        isOpen={isShareDialogOpen}
+        onClose={handleCloseShareDialog}
       />
     </div>
   );

@@ -10,7 +10,8 @@ import {
   FileText,
   File,
   ExternalLink,
-  Eye
+  Eye,
+  Share
 } from 'lucide-react';
 import { Entry, Attachment } from '@/types';
 import { useStore } from '@/store/useStore';
@@ -21,6 +22,7 @@ import ImageModal from './ImageModal';
 import ImageGallery from './ImageGallery';
 import SlideOver from './ui/SlideOver';
 import EntryDetails from './EntryDetails';
+import ShareDialog from './ShareDialog';
 
 interface EntryListProps {
   onEditEntry: (entry: Entry) => void;
@@ -35,6 +37,8 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
   const [galleryImages, setGalleryImages] = useState<Attachment[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [shareEntry, setShareEntry] = useState<Entry | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
 
   const handleImageClick = (attachment: Attachment, entryAttachments?: Attachment[]) => {
     // If there are multiple images in the entry, use gallery mode
@@ -77,6 +81,16 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
   const handleCloseSlideOver = () => {
     setIsSlideOverOpen(false);
     setSelectedEntry(null);
+  };
+
+  const handleShareEntry = (entry: Entry) => {
+    setShareEntry(entry);
+    setIsShareDialogOpen(true);
+  };
+
+  const handleCloseShareDialog = () => {
+    setIsShareDialogOpen(false);
+    setShareEntry(null);
   };
 
   const handleDeleteEntry = async (entryId: string) => {
@@ -205,6 +219,14 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleShareEntry(entry)}
+                        title="Eintrag teilen"
+                      >
+                        <Share className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => onEditEntry(entry)}
                         title="Bearbeiten"
                       >
@@ -300,6 +322,15 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
             onClose={handleCloseSlideOver}
           />
         </SlideOver>
+      )}
+
+      {/* Share Dialog */}
+      {shareEntry && (
+        <ShareDialog
+          entry={shareEntry}
+          isOpen={isShareDialogOpen}
+          onClose={handleCloseShareDialog}
+        />
       )}
     </div>
   );
