@@ -57,14 +57,14 @@ const SlideOver: React.FC<SlideOverProps> = ({
       {/* Backdrop */}
       <div
         className={cn(
-          'fixed inset-0 bg-black bg-opacity-50 transition-opacity z-40',
+          'fixed inset-0 bg-black bg-opacity-50 transition-opacity z-[9998]',
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
         onClick={onClose}
       />
 
       {/* Slide-over container */}
-      <div className={cn('fixed inset-0 overflow-hidden z-50 pointer-events-none')}>
+      <div className={cn('fixed inset-0 overflow-hidden z-[9999] pointer-events-none')}>
         <div className={cn('absolute inset-0 overflow-hidden')}>
           <div className={cn(
             'pointer-events-none fixed inset-y-0 w-full flex',
@@ -73,14 +73,14 @@ const SlideOver: React.FC<SlideOverProps> = ({
             {/* Slide-over panel */}
             <div
               className={cn(
-                'pointer-events-auto transition-transform duration-300 ease-in-out transform',
+                'pointer-events-auto transition-transform duration-300 ease-in-out transform relative',
                 sizeClasses[size],
                 panelTransform
               )}
             >
-              <div className="flex h-full flex-col bg-white shadow-xl">
+              <div className="flex h-full flex-col bg-white shadow-xl overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
                   <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
                   <button
                     onClick={onClose}
@@ -91,7 +91,7 @@ const SlideOver: React.FC<SlideOverProps> = ({
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto min-h-0">
                   {children}
                 </div>
               </div>
