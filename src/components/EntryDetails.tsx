@@ -206,6 +206,38 @@ const EntryDetails: React.FC<EntryDetailsProps> = ({
         </div>
       </div>
 
+      {/* Additional Details */}
+      {(entry.initiator || entry.mediationAttempt || entry.chatExtract) && (
+        <div className="space-y-4">
+          {entry.initiator && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">Initiator</h4>
+              <div className="bg-blue-50 rounded-lg p-3">
+                <p className="text-gray-700">{entry.initiator}</p>
+              </div>
+            </div>
+          )}
+
+          {entry.mediationAttempt && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">Schlichtungsversuch</h4>
+              <div className="bg-green-50 rounded-lg p-3">
+                <p className="text-gray-700 whitespace-pre-wrap">{entry.mediationAttempt}</p>
+              </div>
+            </div>
+          )}
+
+          {entry.chatExtract && (
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-2">Chat-Auszug</h4>
+              <div className="bg-amber-50 rounded-lg p-3">
+                <p className="text-gray-700 whitespace-pre-wrap font-mono text-sm">{entry.chatExtract}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Attachments */}
       {entry.attachments.length > 0 && (
         <div className="space-y-3">

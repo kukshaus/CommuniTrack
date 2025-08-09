@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { Plus, Download, FileText, Settings, Star, Camera, FolderOpen } from 'lucide-react';
+import { Plus, Download, FileText, Settings, Star, Camera, FolderOpen, Upload, Trash2 } from 'lucide-react';
 import { Entry } from '@/types';
 import { useStore } from '@/store/useStore';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -9,6 +9,8 @@ import EntryForm from './EntryForm';
 import EntryList from './EntryList';
 import FilterBar from './FilterBar';
 import ExportDialog from './ExportDialog';
+import ImportDialog from './ImportDialog';
+import BulkDeleteDialog from './BulkDeleteDialog';
 import LoadingSpinner from './LoadingSpinner';
 import SlideOver from './ui/SlideOver';
 import UserSettings from './UserSettings';
@@ -16,6 +18,8 @@ import UserSettings from './UserSettings';
 export interface DashboardRef {
   handleNewEntry: () => void;
   handleExport: () => void;
+  handleImport: () => void;
+  handleBulkDelete: () => void;
   handleOpenSettings: () => void;
 }
 
@@ -36,6 +40,8 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
   
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Entry | undefined>();
 
@@ -70,6 +76,14 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
     setShowExportDialog(true);
   };
 
+  const handleImport = () => {
+    setShowImportDialog(true);
+  };
+
+  const handleBulkDelete = () => {
+    setShowBulkDeleteDialog(true);
+  };
+
   const handleOpenSettings = () => {
     setShowSettings(true);
   };
@@ -78,6 +92,8 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
   useImperativeHandle(ref, () => ({
     handleNewEntry,
     handleExport,
+    handleImport,
+    handleBulkDelete,
     handleOpenSettings,
   }));
 
@@ -133,6 +149,23 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
             <p className="text-gray-600 mt-2 text-lg">{t('dashboard.subtitle')}</p>
           </div>
           <div className="flex items-center space-x-3 animate-slide-up">
+            <Button
+              variant="outline"
+              onClick={handleBulkDelete}
+              disabled={entries.length === 0}
+              className="flex items-center shadow-sm hover:shadow-md transition-all duration-200 text-red-600 border-red-200 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Bulk-Löschung
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleImport}
+              className="flex items-center shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </Button>
             <Button
               variant="outline"
               onClick={handleExport}
@@ -286,6 +319,34 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
         >
           <ExportDialog
             onClose={() => setShowExportDialog(false)}
+          />
+        </SlideOver>
+      )}
+
+      {showImportDialog && (
+        <SlideOver
+          isOpen={showImportDialog}
+          onClose={() => setShowImportDialog(false)}
+          title="Daten Import"
+          side="right"
+          size="xl"
+        >
+          <ImportDialog
+            onClose={() => setShowImportDialog(false)}
+          />
+        </SlideOver>
+      )}
+
+      {showBulkDeleteDialog && (
+        <SlideOver
+          isOpen={showBulkDeleteDialog}
+          onClose={() => setShowBulkDeleteDialog(false)}
+          title="Bulk-Löschung"
+          side="right"
+          size="xl"
+        >
+          <BulkDeleteDialog
+            onClose={() => setShowBulkDeleteDialog(false)}
           />
         </SlideOver>
       )}

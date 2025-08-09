@@ -33,6 +33,9 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
     category: entry?.category || 'sonstiges' as EntryCategory,
     tags: entry?.tags?.join(', ') || '',
     isImportant: entry?.isImportant || false,
+    initiator: entry?.initiator || '',
+    mediationAttempt: entry?.mediationAttempt || '',
+    chatExtract: entry?.chatExtract || '',
   });
   
   const [files, setFiles] = useState<File[]>([]);
@@ -107,6 +110,9 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
           .map(tag => tag.trim())
           .filter(tag => tag.length > 0),
         isImportant: formData.isImportant,
+        initiator: formData.initiator.trim() || undefined,
+        mediationAttempt: formData.mediationAttempt.trim() || undefined,
+        chatExtract: formData.chatExtract.trim() || undefined,
         attachments: [...existingAttachments, ...attachments],
         createdAt: entry?.createdAt || new Date(),
         updatedAt: new Date(),
@@ -225,6 +231,42 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
               {errors.description && (
                 <p className="mt-1 text-sm text-red-600">{errors.description}</p>
               )}
+            </div>
+
+            {/* Initiator */}
+            <Input
+              label="Initiator"
+              value={formData.initiator}
+              onChange={(e) => setFormData(prev => ({ ...prev, initiator: e.target.value }))}
+              placeholder="Wer hat den Vorfall/das Gespräch initiiert..."
+            />
+
+            {/* Mediation Attempt */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Schlichtungsversuch
+              </label>
+              <textarea
+                value={formData.mediationAttempt}
+                onChange={(e) => setFormData(prev => ({ ...prev, mediationAttempt: e.target.value }))}
+                rows={2}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                placeholder="Beschreibung von Lösungsversuchen..."
+              />
+            </div>
+
+            {/* Chat Extract */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Chat-Auszug
+              </label>
+              <textarea
+                value={formData.chatExtract}
+                onChange={(e) => setFormData(prev => ({ ...prev, chatExtract: e.target.value }))}
+                rows={3}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                placeholder="Relevante Nachrichten oder Kommunikation..."
+              />
             </div>
 
             {/* Tags */}

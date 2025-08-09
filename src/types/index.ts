@@ -7,6 +7,9 @@ export interface Entry {
   attachments: Attachment[];
   tags: string[];
   isImportant: boolean;
+  initiator?: string; // Wer hat den Vorfall/das Gespräch initiiert
+  mediationAttempt?: string; // Schlichtungsversuch
+  chatExtract?: string; // Chat-Auszug
   createdAt: Date;
   updatedAt: Date;
   userId: string; // Benutzer-spezifische Einträge
