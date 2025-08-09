@@ -140,6 +140,23 @@ const translations = {
     'settings.success': 'Settings saved successfully!',
     'settings.error': 'Error saving settings',
 
+    // Upsell content
+    'upsell.tagline': 'Your secure solution for professional communication documentation',
+    'upsell.legal.title': 'Legally Secure Documentation',
+    'upsell.legal.description': 'Document important conversations, conflicts, and events with timestamps and evidence for legal protection.',
+    'upsell.security.title': 'Privacy & Security',
+    'upsell.security.description': 'Your sensitive data is protected by state-of-the-art encryption and remains completely private and confidential.',
+    'upsell.organization.title': 'Smart Organization',
+    'upsell.organization.description': 'Categorize, tag, and search your entries effortlessly. Export reports for lawyers or authorities.',
+    'upsell.multimedia.title': 'Multimedia Evidence',
+    'upsell.multimedia.description': 'Add photos, videos, audio recordings, and documents as evidence to your entries.',
+    'upsell.ideal.title': 'Perfect for:',
+    'upsell.ideal.workplace': '• Workplace conflicts and bullying',
+    'upsell.ideal.neighborhood': '• Neighborhood disputes',
+    'upsell.ideal.family': '• Family and custody matters',
+    'upsell.ideal.business': '• Business communication',
+    'upsell.ideal.rental': '• Rental law disputes',
+
     // Login & Register
     'login.title': 'Sign In',
     'login.subtitle': 'Welcome back',
@@ -333,7 +350,24 @@ const translations = {
     'settings.saving': 'Wird gespeichert...',
     'settings.success': 'Einstellungen erfolgreich gespeichert!',
     'settings.error': 'Fehler beim Speichern der Einstellungen',
-
+    
+    // Upsell content
+    'upsell.tagline': 'Ihre sichere Lösung für professionelle Kommunikationsdokumentation',
+    'upsell.legal.title': 'Rechtssichere Dokumentation',
+    'upsell.legal.description': 'Dokumentieren Sie wichtige Gespräche, Konflikte und Ereignisse mit Zeitstempel und Beweismitteln für rechtliche Absicherung.',
+    'upsell.security.title': 'Datenschutz & Sicherheit',
+    'upsell.security.description': 'Ihre sensiblen Daten sind durch modernste Verschlüsselung geschützt und bleiben vollständig privat und vertraulich.',
+    'upsell.organization.title': 'Intelligente Organisation',
+    'upsell.organization.description': 'Kategorisieren, taggen und durchsuchen Sie Ihre Einträge mühelos. Exportieren Sie Berichte für Anwälte oder Behörden.',
+    'upsell.multimedia.title': 'Multimedia-Beweise',
+    'upsell.multimedia.description': 'Fügen Sie Fotos, Videos, Audio-Aufnahmen und Dokumente als Beweismittel zu Ihren Einträgen hinzu.',
+    'upsell.ideal.title': 'Ideal für:',
+    'upsell.ideal.workplace': '• Arbeitsplatz-Konflikte und Mobbing',
+    'upsell.ideal.neighborhood': '• Nachbarschaftsstreitigkeiten',
+    'upsell.ideal.family': '• Familien- und Sorgerechtsangelegenheiten',
+    'upsell.ideal.business': '• Geschäftliche Kommunikation',
+    'upsell.ideal.rental': '• Mietrechtliche Auseinandersetzungen',
+    
     // Login & Register
     'login.title': 'Anmelden',
     'login.subtitle': 'Willkommen zurück',
