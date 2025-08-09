@@ -76,7 +76,7 @@ const UserSettings: React.FC<UserSettingsProps> = ({ onClose }) => {
   };
 
   const handleSave = async () => {
-    if (!validateForm()) return;
+    if (!validateForm() || !user) return;
 
     setIsLoading(true);
     setSuccess('');

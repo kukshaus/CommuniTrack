@@ -170,7 +170,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
             </CardContent>
           </Card>
 
-          <Card hover className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <Card hover className="animate-slide-up [animation-delay:0.1s]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -188,7 +188,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
             </CardContent>
           </Card>
 
-          <Card hover className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <Card hover className="animate-slide-up [animation-delay:0.2s]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -206,7 +206,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
             </CardContent>
           </Card>
 
-          <Card hover className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+          <Card hover className="animate-slide-up [animation-delay:0.3s]">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
