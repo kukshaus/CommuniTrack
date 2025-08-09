@@ -62,7 +62,7 @@ const FilterBar: React.FC = () => {
             <Filter className="h-4 w-4 mr-2" />
             Filter
             {hasActiveFilters && (
-              <span className="ml-2 bg-primary-600 text-white text-xs rounded-full px-2 py-0.5">
+              <span className="ml-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs rounded-full px-2.5 py-0.5 shadow-sm">
                 {Object.keys(filters).length}
               </span>
             )}
