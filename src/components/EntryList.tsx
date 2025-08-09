@@ -18,6 +18,7 @@ import { formatDate } from '@/lib/utils';
 import Button from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import ImageModal from './ImageModal';
+import ImageGallery from './ImageGallery';
 import SlideOver from './ui/SlideOver';
 import EntryDetails from './EntryDetails';
 
@@ -31,8 +32,24 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<Attachment[]>([]);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
-  const handleImageClick = (attachment: Attachment) => {
+  const handleImageClick = (attachment: Attachment, entryAttachments?: Attachment[]) => {
+    // If there are multiple images in the entry, use gallery mode
+    if (entryAttachments && entryAttachments.length > 1) {
+      const imageAttachments = entryAttachments.filter(att => att.fileType.startsWith('image/'));
+      if (imageAttachments.length > 1) {
+        const index = imageAttachments.findIndex(img => img.fileName === attachment.fileName);
+        setGalleryImages(imageAttachments);
+        setGalleryIndex(Math.max(0, index));
+        setIsGalleryOpen(true);
+        return;
+      }
+    }
+    
+    // Single image mode
     setSelectedImage(attachment);
     setIsModalOpen(true);
   };
@@ -40,6 +57,16 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedImage(null);
+  };
+
+  const handleCloseGallery = () => {
+    setIsGalleryOpen(false);
+    setGalleryImages([]);
+    setGalleryIndex(0);
+  };
+
+  const handleGalleryIndexChange = (index: number) => {
+    setGalleryIndex(index);
   };
 
   const handleEntryClick = (entry: Entry) => {
@@ -213,6 +240,7 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
                             key={attachIndex}
                             attachment={attachment}
                             onImageClick={handleImageClick}
+                            entryAttachments={entry.attachments}
                           />
                         ))}
                       </div>
@@ -247,6 +275,15 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
         onClose={handleCloseModal}
       />
 
+      {/* Image Gallery */}
+      <ImageGallery
+        images={galleryImages}
+        currentIndex={galleryIndex}
+        isOpen={isGalleryOpen}
+        onClose={handleCloseGallery}
+        onIndexChange={handleGalleryIndexChange}
+      />
+
       {/* Entry Details Slide-over */}
       {selectedEntry && (
         <SlideOver
@@ -270,13 +307,14 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
 
 interface AttachmentPreviewProps {
   attachment: Attachment;
-  onImageClick: (attachment: Attachment) => void;
+  onImageClick: (attachment: Attachment, entryAttachments?: Attachment[]) => void;
+  entryAttachments?: Attachment[];
 }
 
-const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onImageClick }) => {
+const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onImageClick, entryAttachments }) => {
   const handleClick = () => {
     if (attachment.fileType.startsWith('image/')) {
-      onImageClick(attachment);
+      onImageClick(attachment, entryAttachments);
     } else {
       // For non-image files (PDFs, documents, etc.), open in new tab
       window.open(attachment.url, '_blank');

@@ -16,6 +16,7 @@ import { Entry, Attachment } from '@/types';
 import { formatDate } from '@/lib/utils';
 import Button from './ui/Button';
 import ImageModal from './ImageModal';
+import ImageGallery from './ImageGallery';
 
 interface EntryDetailsProps {
   entry: Entry;
@@ -32,15 +33,39 @@ const EntryDetails: React.FC<EntryDetailsProps> = ({
 }) => {
   const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<Attachment[]>([]);
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   const handleImageClick = (attachment: Attachment) => {
-    setSelectedImage(attachment);
-    setIsImageModalOpen(true);
+    // Check if there are multiple images in the entry
+    const imageAttachments = entry.attachments.filter(att => att.fileType.startsWith('image/'));
+    
+    if (imageAttachments.length > 1) {
+      const index = imageAttachments.findIndex(img => img.fileName === attachment.fileName);
+      setGalleryImages(imageAttachments);
+      setGalleryIndex(Math.max(0, index));
+      setIsGalleryOpen(true);
+    } else {
+      // Single image mode
+      setSelectedImage(attachment);
+      setIsImageModalOpen(true);
+    }
   };
 
   const handleCloseImageModal = () => {
     setIsImageModalOpen(false);
     setSelectedImage(null);
+  };
+
+  const handleCloseGallery = () => {
+    setIsGalleryOpen(false);
+    setGalleryImages([]);
+    setGalleryIndex(0);
+  };
+
+  const handleGalleryIndexChange = (index: number) => {
+    setGalleryIndex(index);
   };
 
   const handleEdit = () => {
@@ -263,6 +288,15 @@ const EntryDetails: React.FC<EntryDetailsProps> = ({
         attachment={selectedImage}
         isOpen={isImageModalOpen}
         onClose={handleCloseImageModal}
+      />
+
+      {/* Image Gallery */}
+      <ImageGallery
+        images={galleryImages}
+        currentIndex={galleryIndex}
+        isOpen={isGalleryOpen}
+        onClose={handleCloseGallery}
+        onIndexChange={handleGalleryIndexChange}
       />
     </div>
   );
