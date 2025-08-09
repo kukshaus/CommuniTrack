@@ -1,12 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Coffee } from 'lucide-react';
+import { Coffee, Settings } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 
-interface AppHeaderProps {}
+interface AppHeaderProps {
+  onOpenSettings?: () => void;
+}
 
-export default function AppHeader({}: AppHeaderProps) {
+export default function AppHeader({ onOpenSettings }: AppHeaderProps) {
   const { user, logout } = useStore((state) => ({
     user: state.user,
     logout: state.logout,
@@ -41,6 +43,17 @@ export default function AppHeader({}: AppHeaderProps) {
             >
               <Coffee className="h-4 w-4 text-orange-500 group-hover:text-orange-600" />
             </a>
+
+            {/* Settings button */}
+            {onOpenSettings && (
+              <button
+                onClick={onOpenSettings}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                title="Einstellungen"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            )}
 
             {/* User menu - simplified */}
             <div className="flex items-center space-x-3">

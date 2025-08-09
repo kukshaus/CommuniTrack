@@ -10,10 +10,12 @@ import FilterBar from './FilterBar';
 import ExportDialog from './ExportDialog';
 import LoadingSpinner from './LoadingSpinner';
 import SlideOver from './ui/SlideOver';
+import UserSettings from './UserSettings';
 
 export interface DashboardRef {
   handleNewEntry: () => void;
   handleExport: () => void;
+  handleOpenSettings: () => void;
 }
 
 const Dashboard = forwardRef<DashboardRef>((props, ref) => {
@@ -32,6 +34,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
   
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Entry | undefined>();
 
   const loadEntries = useCallback(async () => {
@@ -65,10 +68,15 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
     setShowExportDialog(true);
   };
 
+  const handleOpenSettings = () => {
+    setShowSettings(true);
+  };
+
   // Expose functions to parent component via ref
   useImperativeHandle(ref, () => ({
     handleNewEntry,
     handleExport,
+    handleOpenSettings,
   }));
 
   const handleEditEntry = (entry: Entry) => {
@@ -276,6 +284,20 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
         >
           <ExportDialog
             onClose={() => setShowExportDialog(false)}
+          />
+        </SlideOver>
+      )}
+
+      {showSettings && (
+        <SlideOver
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          title="Einstellungen"
+          side="right"
+          size="lg"
+        >
+          <UserSettings
+            onClose={() => setShowSettings(false)}
           />
         </SlideOver>
       )}

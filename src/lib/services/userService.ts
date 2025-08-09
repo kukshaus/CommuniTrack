@@ -155,6 +155,81 @@ export class UserService {
     }
   }
 
+  async updateUserProfile(userId: string, profileData: {
+    name?: string;
+    username?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }): Promise<{ success: boolean; user?: UserPublic; error?: string }> {
+    try {
+      const collection = await this.getCollection();
+      
+      // Get current user
+      const currentUser = await collection.findOne({ id: userId });
+      if (!currentUser) {
+        return { success: false, error: 'Benutzer nicht gefunden' };
+      }
+
+      // Check if username is already taken by another user
+      if (profileData.username && profileData.username !== currentUser.username) {
+        const existingUser = await collection.findOne({ 
+          username: profileData.username,
+          id: { $ne: userId }
+        });
+        
+        if (existingUser) {
+          return { success: false, error: 'Benutzername ist bereits vergeben' };
+        }
+      }
+
+      // Prepare update data
+      const updateData: any = {
+        updatedAt: new Date()
+      };
+
+      if (profileData.name) {
+        updateData.name = profileData.name;
+      }
+
+      if (profileData.username) {
+        updateData.username = profileData.username;
+      }
+
+      // Handle password change if provided
+      if (profileData.newPassword && profileData.currentPassword) {
+        // Verify current password
+        const isValidPassword = await bcrypt.compare(profileData.currentPassword, currentUser.password);
+        if (!isValidPassword) {
+          return { success: false, error: 'Aktuelles Passwort ist falsch' };
+        }
+
+        // Hash new password
+        updateData.password = await bcrypt.hash(profileData.newPassword, 12);
+      }
+
+      // Update user
+      const result = await collection.updateOne(
+        { id: userId },
+        { $set: updateData }
+      );
+
+      if (result.matchedCount > 0) {
+        const updatedUser = await collection.findOne({ id: userId });
+        if (updatedUser) {
+          return { 
+            success: true, 
+            user: toUserPublic(updatedUser) 
+          };
+        }
+      }
+
+      return { success: false, error: 'Fehler beim Aktualisieren des Profils' };
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      return { success: false, error: 'Interner Server-Fehler' };
+    }
+  }
+
   async deleteUser(userId: string): Promise<boolean> {
     try {
       const collection = await this.getCollection();
