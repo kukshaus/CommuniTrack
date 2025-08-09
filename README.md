@@ -1,5 +1,7 @@
 # 📝 CommuniTrack - Free Communication Documentation Tool
 
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-☕-orange?style=for-the-badge&logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/sergejk)
+
 > **Transform chaotic communication records into organized, legally-ready documentation in minutes, not hours.**
 
 [![GitHub Stars](https://img.shields.io/github/stars/yourusername/communitrack?style=social)](https://github.com/yourusername/communitrack)

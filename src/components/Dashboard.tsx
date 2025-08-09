@@ -113,6 +113,32 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
     <div className="bg-gray-50">
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Action Bar */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
+            <p className="text-gray-600 mt-1">Verwalten Sie Ihre Kommunikationsverläufe</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="outline"
+              onClick={handleExport}
+              disabled={entries.length === 0}
+              className="flex items-center"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <Button
+              onClick={handleNewEntry}
+              className="flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Neuer Eintrag
+            </Button>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>

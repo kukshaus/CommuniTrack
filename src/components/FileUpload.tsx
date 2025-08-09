@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useRef } from 'react';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, FileText, File } from 'lucide-react';
 import { cn, compressImage, generateThumbnail, formatFileSize } from '@/lib/utils';
 import { Attachment } from '@/types';
 import Button from './ui/Button';
@@ -191,6 +191,16 @@ const FilePreview: React.FC<FilePreviewProps> = ({ file, onRemove }) => {
     }
   }, [file]);
 
+  const getFileIcon = () => {
+    if (file.type.startsWith('image/')) {
+      return <ImageIcon className="h-5 w-5 text-gray-400" />;
+    } else if (file.type === 'application/pdf') {
+      return <FileText className="h-5 w-5 text-red-500" />;
+    } else {
+      return <File className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
   return (
     <div className="relative bg-white border border-gray-200 rounded-lg p-3">
       <button
@@ -210,7 +220,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ file, onRemove }) => {
             />
           ) : (
             <div className="h-10 w-10 bg-gray-100 rounded flex items-center justify-center">
-              <ImageIcon className="h-5 w-5 text-gray-400" />
+              {getFileIcon()}
             </div>
           )}
         </div>

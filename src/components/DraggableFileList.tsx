@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
-import { X, GripVertical, Image as ImageIcon } from 'lucide-react';
+import { X, GripVertical, Image as ImageIcon, FileText, File } from 'lucide-react';
 import { generateThumbnail, formatFileSize } from '@/lib/utils';
 
 interface DraggableFileListProps {
@@ -128,6 +128,16 @@ const FilePreviewThumbnail: React.FC<FilePreviewThumbnailProps> = ({ file }) => 
     }
   }, [file]);
 
+  const getFileIcon = () => {
+    if (file.type.startsWith('image/')) {
+      return <ImageIcon className="h-5 w-5 text-gray-400" />;
+    } else if (file.type === 'application/pdf') {
+      return <FileText className="h-5 w-5 text-red-500" />;
+    } else {
+      return <File className="h-5 w-5 text-gray-400" />;
+    }
+  };
+
   if (thumbnail) {
     return (
       <img
@@ -140,7 +150,7 @@ const FilePreviewThumbnail: React.FC<FilePreviewThumbnailProps> = ({ file }) => 
 
   return (
     <div className="h-10 w-10 bg-gray-100 rounded flex items-center justify-center">
-      <ImageIcon className="h-5 w-5 text-gray-400" />
+      {getFileIcon()}
     </div>
   );
 };

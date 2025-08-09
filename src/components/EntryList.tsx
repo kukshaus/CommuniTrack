@@ -6,7 +6,10 @@ import {
   Edit, 
   Trash2, 
   Tag,
-  MoreVertical 
+  MoreVertical,
+  FileText,
+  File,
+  ExternalLink
 } from 'lucide-react';
 import { Entry, Attachment } from '@/types';
 import { useStore } from '@/store/useStore';
@@ -231,6 +234,19 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onIma
   const handleClick = () => {
     if (attachment.fileType.startsWith('image/')) {
       onImageClick(attachment);
+    } else {
+      // For non-image files (PDFs, documents, etc.), open in new tab
+      window.open(attachment.url, '_blank');
+    }
+  };
+
+  const getFileIcon = () => {
+    if (attachment.fileType.startsWith('image/')) {
+      return <ImageIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />;
+    } else if (attachment.fileType === 'application/pdf') {
+      return <FileText className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />;
+    } else {
+      return <File className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />;
     }
   };
 
@@ -254,11 +270,16 @@ const AttachmentPreview: React.FC<AttachmentPreviewProps> = ({ attachment, onIma
   }
 
   return (
-    <div className="flex items-center p-2 bg-gray-50 rounded-lg">
-      <ImageIcon className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-      <span className="text-xs text-gray-600 truncate">
+    <div 
+      className="flex items-center p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors group"
+      onClick={handleClick}
+      title={`${attachment.fileName} öffnen`}
+    >
+      {getFileIcon()}
+      <span className="text-xs text-gray-600 truncate flex-1">
         {attachment.fileName}
       </span>
+      <ExternalLink className="h-3 w-3 text-gray-400 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
     </div>
   );
 };

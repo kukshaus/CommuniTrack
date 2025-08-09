@@ -291,6 +291,7 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
                 files={[]} // Don't show files here anymore, they're shown above
                 onFilesAdd={handleFilesAdd}
                 onFileRemove={() => {}} // Not used since files are shown above
+                accept="image/*,.pdf,.doc,.docx,.txt"
               />
               
               {/* Helper Text */}

@@ -1,20 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Plus, Download } from 'lucide-react';
+import { Coffee, Heart } from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import Button from '@/components/ui/Button';
 
-interface AppHeaderProps {
-  onNewEntry?: () => void;
-  onExport?: () => void;
-}
+interface AppHeaderProps {}
 
-export default function AppHeader({ onNewEntry, onExport }: AppHeaderProps) {
-  const { user, logout, entries } = useStore((state) => ({
+export default function AppHeader({}: AppHeaderProps) {
+  const { user, logout } = useStore((state) => ({
     user: state.user,
     logout: state.logout,
-    entries: state.entries,
   }));
 
   const handleLogout = () => {
@@ -33,35 +28,23 @@ export default function AppHeader({ onNewEntry, onExport }: AppHeaderProps) {
             <span className="ml-4 text-sm text-gray-500">Kommunikationsverläufe</span>
           </div>
 
-          {/* Actions and User Info */}
-          <div className="flex items-center space-x-4">
-            {/* Action Buttons */}
-            {onExport && (
-              <Button
-                variant="outline"
-                onClick={onExport}
-                disabled={entries.length === 0}
-                size="sm"
-                className="flex items-center"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            )}
-            
-            {onNewEntry && (
-              <Button
-                onClick={onNewEntry}
-                size="sm"
-                className="flex items-center"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Neuer Eintrag
-              </Button>
-            )}
+          {/* Right side - Coffee link and User Info */}
+          <div className="flex items-center space-x-6">
+            {/* Buy me a coffee link */}
+            <a
+              href="https://buymeacoffee.com/sergejk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center px-3 py-2 text-sm text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200 group"
+              title="Unterstützen Sie das Projekt"
+            >
+              <Coffee className="h-4 w-4 mr-2 text-orange-500 group-hover:text-orange-600" />
+              <span className="hidden md:inline">Kaffee spendieren</span>
+              <Heart className="h-3 w-3 ml-1 text-red-400 opacity-70" />
+            </a>
 
             {/* User Info */}
-            <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
+            <div className="flex items-center space-x-3 pl-6 border-l border-gray-200">
               <div className="text-sm text-gray-600">
                 Angemeldet als{' '}
                 <span className="font-medium text-gray-900">{user.name}</span>
@@ -72,14 +55,12 @@ export default function AppHeader({ onNewEntry, onExport }: AppHeaderProps) {
                 )}
               </div>
               
-              <Button
+              <button
                 onClick={handleLogout}
-                variant="outline"
-                size="sm"
-                className="text-gray-600 hover:text-gray-900"
+                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 Abmelden
-              </Button>
+              </button>
             </div>
           </div>
         </div>
