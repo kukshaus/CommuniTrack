@@ -1,10 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { X, Save, Tag, Calendar, FileText } from 'lucide-react';
+import { Save, Tag, Calendar, FileText, AlertCircle } from 'lucide-react';
 import { Entry, EntryCategory, Attachment } from '@/types';
 import { useStore } from '@/store/useStore';
 import Button from './ui/Button';
 import Input from './ui/Input';
-import { Card, CardHeader, CardContent } from './ui/Card';
 import FileUpload from './FileUpload';
 import DraggableAttachmentList from './DraggableAttachmentList';
 import DraggableFileList from './DraggableFileList';
@@ -170,21 +169,8 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {entry ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}
-            </h2>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </CardHeader>
-        
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="p-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
             {/* Title */}
             <Input
               label="Titel"
@@ -312,9 +298,7 @@ const EntryForm: React.FC<EntryFormProps> = ({ entry, onClose }) => {
                 {isSaving ? 'Speichere...' : 'Speichern'}
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+      </form>
     </div>
   );
 };

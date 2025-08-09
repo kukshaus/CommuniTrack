@@ -9,6 +9,7 @@ import EntryList from './EntryList';
 import FilterBar from './FilterBar';
 import ExportDialog from './ExportDialog';
 import LoadingSpinner from './LoadingSpinner';
+import SlideOver from './ui/SlideOver';
 
 export interface DashboardRef {
   handleNewEntry: () => void;
@@ -255,18 +256,34 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
         </div>
       </main>
 
-      {/* Modals */}
+      {/* Slide-overs */}
       {showEntryForm && (
-        <EntryForm
-          entry={editingEntry}
+        <SlideOver
+          isOpen={showEntryForm}
           onClose={handleCloseForm}
-        />
+          title={editingEntry ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}
+          side="right"
+          size="xl"
+        >
+          <EntryForm
+            entry={editingEntry}
+            onClose={handleCloseForm}
+          />
+        </SlideOver>
       )}
 
       {showExportDialog && (
-        <ExportDialog
+        <SlideOver
+          isOpen={showExportDialog}
           onClose={() => setShowExportDialog(false)}
-        />
+          title="Export"
+          side="right"
+          size="lg"
+        >
+          <ExportDialog
+            onClose={() => setShowExportDialog(false)}
+          />
+        </SlideOver>
       )}
     </div>
   );

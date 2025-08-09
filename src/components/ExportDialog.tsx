@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { Download, X, FileText, Database, Table, Lock } from 'lucide-react';
+import { Download, FileText, Database, Table, Lock } from 'lucide-react';
 import { ExportOptions } from '@/types';
 import { useStore } from '@/store/useStore';
 import { exportToHTML, exportToPDF, exportToExcel, downloadFile } from '@/lib/export';
 import Button from './ui/Button';
 import Input from './ui/Input';
-import { Card, CardHeader, CardContent } from './ui/Card';
 import LoadingSpinner from './LoadingSpinner';
 
 interface ExportDialogProps {
@@ -90,21 +89,7 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-              <Download className="h-5 w-5 mr-2" />
-              Export
-            </h2>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-6">
+    <div className="p-6 space-y-6">
           {/* Format Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -259,8 +244,6 @@ const ExportDialog: React.FC<ExportDialogProps> = ({ onClose }) => {
               )}
             </Button>
           </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

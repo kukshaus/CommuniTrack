@@ -9,7 +9,8 @@ import {
   MoreVertical,
   FileText,
   File,
-  ExternalLink
+  ExternalLink,
+  Eye
 } from 'lucide-react';
 import { Entry, Attachment } from '@/types';
 import { useStore } from '@/store/useStore';
@@ -17,6 +18,8 @@ import { formatDate } from '@/lib/utils';
 import Button from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import ImageModal from './ImageModal';
+import SlideOver from './ui/SlideOver';
+import EntryDetails from './EntryDetails';
 
 interface EntryListProps {
   onEditEntry: (entry: Entry) => void;
@@ -26,6 +29,8 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
   const { filteredEntries, deleteEntry, setLoading, user } = useStore();
   const [selectedImage, setSelectedImage] = useState<Attachment | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+  const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
 
   const handleImageClick = (attachment: Attachment) => {
     setSelectedImage(attachment);
@@ -35,6 +40,16 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedImage(null);
+  };
+
+  const handleEntryClick = (entry: Entry) => {
+    setSelectedEntry(entry);
+    setIsSlideOverOpen(true);
+  };
+
+  const handleCloseSlideOver = () => {
+    setIsSlideOverOpen(false);
+    setSelectedEntry(null);
   };
 
   const handleDeleteEntry = async (entryId: string) => {
@@ -155,7 +170,16 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleEntryClick(entry)}
+                        title="Details anzeigen"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => onEditEntry(entry)}
+                        title="Bearbeiten"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -163,6 +187,7 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
                         variant="ghost"
                         size="sm"
                         onClick={() => entry._id && handleDeleteEntry(entry._id)}
+                        title="Löschen"
                       >
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>
@@ -221,6 +246,24 @@ const EntryList: React.FC<EntryListProps> = ({ onEditEntry }) => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
+
+      {/* Entry Details Slide-over */}
+      {selectedEntry && (
+        <SlideOver
+          isOpen={isSlideOverOpen}
+          onClose={handleCloseSlideOver}
+          title="Eintrag Details"
+          side="right"
+          size="xl"
+        >
+          <EntryDetails
+            entry={selectedEntry}
+            onEdit={onEditEntry}
+            onDelete={handleDeleteEntry}
+            onClose={handleCloseSlideOver}
+          />
+        </SlideOver>
+      )}
     </div>
   );
 };
