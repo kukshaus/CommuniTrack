@@ -27,7 +27,7 @@ const ShareDialog: React.FC<ShareDialogProps> = ({ entry, isOpen, onClose }) => 
 
   // Format entry content for sharing
   const formatEntryForSharing = (includeAttachments = true) => {
-    const date = formatDate(entry.date);
+    const date = formatDate(new Date(entry.date));
     const importance = entry.isImportant ? ' ⭐ WICHTIG' : '';
     const category = entry.category.charAt(0).toUpperCase() + entry.category.slice(1);
     const tags = entry.tags.length > 0 ? `\nTags: ${entry.tags.join(', ')}` : '';
@@ -180,7 +180,7 @@ Erstellt mit CommuniTrack`;
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-medium text-gray-900 truncate">{entry.title}</h4>
               <p className="text-xs text-gray-600 mt-1">
-                {formatDate(entry.date)} • {entry.category}
+                {formatDate(new Date(entry.date))} • {entry.category}
                 {entry.attachments.length > 0 && (
                   <span className="ml-2">📎 {entry.attachments.length}</span>
                 )}
