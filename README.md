@@ -78,7 +78,7 @@
 
 ### 📦 **Option 1: Instant Demo (No Setup)**
 ```bash
-git clone https://github.com/yourusername/communitrack.git
+git clone https://github.com/kukshaus/communitrack.git
 cd communitrack
 npm install && npm run dev
 ```
@@ -87,7 +87,7 @@ npm install && npm run dev
 ### 🏗️ **Option 2: Full Setup with Database**
 ```bash
 # 1. Clone and setup
-git clone https://github.com/yourusername/communitrack.git
+git clone https://github.com/kukshaus/communitrack.git
 cd communitrack && npm install
 
 # 2. Start database (one command)
