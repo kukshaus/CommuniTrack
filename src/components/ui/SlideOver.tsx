@@ -19,7 +19,8 @@ const SlideOver: React.FC<SlideOverProps> = ({
   size = 'lg',
   children,
 }) => {
-  // Handle escape key
+  const [isFileSelectionActive, setIsFileSelectionActive] = React.useState(false);
+  // Handle escape key and prevent unwanted closes
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -27,17 +28,64 @@ const SlideOver: React.FC<SlideOverProps> = ({
       }
     };
 
+    const handleFocusLoss = (e: Event) => {
+      // Prevent slide-over from closing when file dialogs open
+      if (isFileSelectionActive) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      // Prevent slide-over from closing when page loses focus due to file dialog
+      if (document.hidden && isFileSelectionActive) {
+        return;
+      }
+    };
+
+    // Listen for file input interactions
+    const handleFileInputFocus = () => {
+      setIsFileSelectionActive(true);
+    };
+
+    const handleFileInputBlur = () => {
+      setTimeout(() => setIsFileSelectionActive(false), 100);
+    };
+
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
+      document.addEventListener('blur', handleFocusLoss, true);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('blur', handleFocusLoss, true);
+      
+      // Listen for file input events
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      fileInputs.forEach(input => {
+        input.addEventListener('focus', handleFileInputFocus);
+        input.addEventListener('blur', handleFileInputBlur);
+      });
+      
       // Prevent body scroll when slide-over is open
       document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('blur', handleFocusLoss, true);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleFocusLoss, true);
+      
+      // Clean up file input listeners
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      fileInputs.forEach(input => {
+        input.removeEventListener('focus', handleFileInputFocus);
+        input.removeEventListener('blur', handleFileInputBlur);
+      });
+      
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isFileSelectionActive]);
 
   if (!isOpen) return null;
 
@@ -60,7 +108,12 @@ const SlideOver: React.FC<SlideOverProps> = ({
           'fixed inset-0 bg-black bg-opacity-50 transition-opacity z-[9998]',
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
-        onClick={onClose}
+        onClick={(e) => {
+          // Only close if the backdrop itself was clicked, not during file operations
+          if (e.target === e.currentTarget && !document.querySelector('input[type="file"]:focus')) {
+            onClose();
+          }
+        }}
       />
 
       {/* Slide-over container */}

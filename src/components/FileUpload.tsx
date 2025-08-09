@@ -70,6 +70,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
   }, [processFiles]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
     const selectedFiles = e.target.files;
     if (selectedFiles) {
       processFiles(selectedFiles);
@@ -77,6 +78,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
     // Reset input value to allow same file selection
     e.target.value = '';
   }, [processFiles]);
+
+  const handleButtonClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, []);
 
   const handlePaste = useCallback((e: ClipboardEvent) => {
     const items = e.clipboardData?.items;
@@ -142,7 +151,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
           </p>
           <Button
             variant="outline"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleButtonClick}
             disabled={!canAddMore || isProcessing}
           >
             {isProcessing ? 'Verarbeite...' : 'Dateien auswählen'}
