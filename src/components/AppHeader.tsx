@@ -3,12 +3,14 @@
 import React from 'react';
 import { Coffee, Settings } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AppHeaderProps {
   onOpenSettings?: () => void;
 }
 
 export default function AppHeader({ onOpenSettings }: AppHeaderProps) {
+  const { t } = useLanguage();
   const { user, logout } = useStore((state) => ({
     user: state.user,
     logout: state.logout,
@@ -39,7 +41,7 @@ export default function AppHeader({ onOpenSettings }: AppHeaderProps) {
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center px-3 py-1.5 text-sm text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-all duration-200 group"
-              title="Support CommuniTrack"
+              title={t('header.supportTitle')}
             >
               <Coffee className="h-4 w-4 text-orange-500 group-hover:text-orange-600" />
             </a>
@@ -49,7 +51,7 @@ export default function AppHeader({ onOpenSettings }: AppHeaderProps) {
               <button
                 onClick={onOpenSettings}
                 className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                title="Einstellungen"
+                title={t('header.settings')}
               >
                 <Settings className="h-4 w-4" />
               </button>

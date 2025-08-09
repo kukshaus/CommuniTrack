@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Entry } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 import Button from './ui/Button';
 
 interface ShareDialogProps {
@@ -22,6 +23,7 @@ interface ShareDialogProps {
 }
 
 const ShareDialog: React.FC<ShareDialogProps> = ({ entry, isOpen, onClose }) => {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const [shareMethod, setShareMethod] = useState<string | null>(null);
 
@@ -159,8 +161,8 @@ Erstellt mit CommuniTrack`;
               <Share className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Eintrag teilen</h3>
-              <p className="text-sm text-gray-600">Wählen Sie eine Teilen-Option</p>
+              <h3 className="text-lg font-semibold text-gray-900">{t('share.title')}</h3>
+              <p className="text-sm text-gray-600">{t('share.subtitle')}</p>
             </div>
           </div>
           <button

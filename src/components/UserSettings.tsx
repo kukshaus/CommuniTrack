@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { User, Lock, Mail, Calendar, Shield, Save, X } from 'lucide-react';
+import { User, Lock, Mail, Calendar, Shield, Save, X, Globe } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import { useLanguage } from '@/contexts/LanguageContext';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import { Card, CardHeader, CardContent } from './ui/Card';
@@ -11,6 +12,7 @@ interface UserSettingsProps {
 
 const UserSettings: React.FC<UserSettingsProps> = ({ onClose }) => {
   const { user, setUser } = useStore();
+  const { language, setLanguage, t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [success, setSuccess] = useState('');
@@ -273,6 +275,31 @@ const UserSettings: React.FC<UserSettingsProps> = ({ onClose }) => {
               error={errors.confirmPassword}
               autoComplete="off"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Language Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center space-x-2">
+            <Globe className="h-5 w-5 text-gray-600" />
+            <h4 className="font-medium text-gray-900">{t('settings.language.title')}</h4>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('settings.language.select')}
+            </label>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as 'en' | 'de')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="en">{t('settings.language.english')}</option>
+              <option value="de">{t('settings.language.german')}</option>
+            </select>
           </div>
         </CardContent>
       </Card>

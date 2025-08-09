@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandl
 import { Plus, Download, FileText, Settings, Star, Camera, FolderOpen } from 'lucide-react';
 import { Entry } from '@/types';
 import { useStore } from '@/store/useStore';
+import { useLanguage } from '@/contexts/LanguageContext';
 import Button from './ui/Button';
 import { Card, CardHeader, CardContent } from './ui/Card';
 import EntryForm from './EntryForm';
@@ -19,6 +20,7 @@ export interface DashboardRef {
 }
 
 const Dashboard = forwardRef<DashboardRef>((props, ref) => {
+  const { t } = useLanguage();
   const { 
     entries, 
     filteredEntries, 
@@ -126,9 +128,9 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
         <div className="flex justify-between items-start mb-12">
           <div className="animate-slide-up">
             <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
-              Dashboard
+              {t('dashboard.title')}
             </h2>
-            <p className="text-gray-600 mt-2 text-lg">Verwalten Sie Ihre Kommunikationsverläufe</p>
+            <p className="text-gray-600 mt-2 text-lg">{t('dashboard.subtitle')}</p>
           </div>
           <div className="flex items-center space-x-3 animate-slide-up">
             <Button
@@ -138,14 +140,14 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
               className="flex items-center shadow-sm hover:shadow-md transition-all duration-200"
             >
               <Download className="h-4 w-4 mr-2" />
-              Export
+              {t('dashboard.export')}
             </Button>
             <Button
               onClick={handleNewEntry}
               className="flex items-center shadow-md hover:shadow-lg transition-all duration-200 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Neuer Eintrag
+              {t('dashboard.newEntry')}
             </Button>
           </div>
         </div>
@@ -157,7 +159,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">
-                    Gesamt Einträge
+                    {t('dashboard.stats.total')}
                   </p>
                   <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent">
                     {stats.totalEntries}
@@ -175,7 +177,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">
-                    Wichtige Einträge
+                    {t('dashboard.stats.important')}
                   </p>
                   <p className="text-3xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
                     {stats.importantEntries}
@@ -193,7 +195,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">
-                    Mit Medien
+                    {t('dashboard.stats.attachments')}
                   </p>
                   <p className="text-3xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
                     {stats.entriesWithMedia}
@@ -211,7 +213,7 @@ const Dashboard = forwardRef<DashboardRef>((props, ref) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 mb-1">
-                    Kategorien
+                    {t('dashboard.stats.categories')}
                   </p>
                   <p className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-indigo-500 bg-clip-text text-transparent">
                     {stats.categories}
